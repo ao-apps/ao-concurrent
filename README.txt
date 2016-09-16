@@ -1,4 +1,6 @@
-To provide patches or gain CVS access, please contact:
+Concurrent programming utilities.
+
+For questions or support, please contact:
 
     AO Industries, Inc.
     7262 Bull Pen Cir
