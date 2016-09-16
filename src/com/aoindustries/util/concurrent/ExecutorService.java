@@ -22,8 +22,8 @@
  */
 package com.aoindustries.util.concurrent;
 
-import com.aoindustries.lang.DisposedException;
 import com.aoindustries.lang.Disposable;
+import com.aoindustries.lang.DisposedException;
 import com.aoindustries.lang.RuntimeUtils;
 import com.aoindustries.util.AtomicSequence;
 import com.aoindustries.util.Sequence;
@@ -69,7 +69,7 @@ final public class ExecutorService implements Disposable {
     /**
      * The maximum number of nanoseconds that will be waited for during dispose (0.1 seconds).
      */
-    private static final long DISPOSE_WAIT_NANOS = 100L * 1000L * 1000L; // 60L * 1000L * 1000L * 1000L;
+    private static final long DISPOSE_WAIT_NANOS = 100L * 1000L * 1000L; // Was one minute: 60L * 1000L * 1000L * 1000L;
 
     /**
      * Keeps track of which threads are running from the per-processor executor.
