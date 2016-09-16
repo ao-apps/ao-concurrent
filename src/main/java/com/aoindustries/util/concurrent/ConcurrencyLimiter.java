@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2013, 2015  AO Industries, Inc.
+ * Copyright (C) 2013, 2015, 2016  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -34,7 +34,7 @@ import java.util.concurrent.ExecutionException;
  */
 final public class ConcurrencyLimiter<K,R> {
 
-    //private static final Logger logger = Logger.getLogger(ConcurrencyLimiter.class.getName());
+	//private static final Logger logger = Logger.getLogger(ConcurrencyLimiter.class.getName());
 
 	private static class ResultsCache<R> {
 		private int threadCount;
@@ -71,7 +71,7 @@ final public class ConcurrencyLimiter<K,R> {
 		final ResultsCache<R> resultsCache;
 		synchronized(executeSerializedStatus) {
 			// Look for any existing entry for this key
-			ResultsCache<R>resultsCacheT = executeSerializedStatus.get(key);
+			ResultsCache<R> resultsCacheT = executeSerializedStatus.get(key);
 			if(resultsCacheT==null) {
 				executeSerializedStatus.put(key, resultsCacheT = new ResultsCache<R>());
 			}
