@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2013, 2015  AO Industries, Inc.
+ * Copyright (C) 2013, 2015, 2016  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -35,10 +35,10 @@ import java.util.concurrent.Future;
  */
 final public class ConcurrentUtils {
 
-    /**
-     * Make no instances.
-     */
-    private ConcurrentUtils() {}
+	/**
+	 * Make no instances.
+	 */
+	private ConcurrentUtils() {}
 
 	/**
 	 * Waits for all futures to complete, discarding any results.
@@ -85,9 +85,9 @@ final public class ConcurrentUtils {
 	 * @return  the map that was given
 	 */
 	public static <K,V,M extends Map<K,V>> M getAll(Map<? extends K,? extends Future<? extends V>> futures, M output) throws InterruptedException, ExecutionException {
-        for(Map.Entry<? extends K,? extends Future<? extends V>> entry : futures.entrySet()) {
+		for(Map.Entry<? extends K,? extends Future<? extends V>> entry : futures.entrySet()) {
 			output.put(entry.getKey(), entry.getValue().get());
-        }
+		}
 		return output;
 	}
 }
