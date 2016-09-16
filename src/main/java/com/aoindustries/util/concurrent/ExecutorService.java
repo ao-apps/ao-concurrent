@@ -26,6 +26,7 @@ import com.aoindustries.lang.Disposable;
 import com.aoindustries.lang.DisposedException;
 import com.aoindustries.lang.RuntimeUtils;
 import com.aoindustries.util.AtomicSequence;
+import com.aoindustries.util.AutoGrowArrayList;
 import com.aoindustries.util.Sequence;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,23 +39,31 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * <p>
  * Provides a central executor service for use by any number of projects.
  * These executors use daemon threads and will not keep the JVM alive.
  * The executors are automatically shutdown using shutdown hooks.  The
  * executors are also immediately shutdown when the last instance is disposed.
- *
+ * </p>
+ * <p>
  * Also allows for delayed execution of tasks using an internal Timer.
+ * </p>
  */
 final public class ExecutorService implements Disposable {
 
 	private static final Logger logger = Logger.getLogger(ExecutorService.class.getName());
+	static {
+		logger.setLevel(Level.ALL); // TODO: Remove for production
+	}
 
 	/**
 	 * The number of threads per processor for per-processor executor.
@@ -72,19 +81,11 @@ final public class ExecutorService implements Disposable {
 	private static final long DISPOSE_WAIT_NANOS = 100L * 1000L * 1000L; // Was one minute: 60L * 1000L * 1000L * 1000L;
 
 	/**
-	 * Keeps track of which threads are running from the per-processor executor.
-	 * TRUE if from per-processor, FALSE if from unbounded, or null a thread is not from this ExecutorService.
+	 * Lock used for static fields access.
 	 */
-	private static final ThreadLocal<Boolean> isPerProcessor = new ThreadLocal<Boolean>();
+	private static final Object privateLock = new Object();
 
-	/**
-	 * Persist threads are named with these prefixes.
-	 */
-	private static final String
-		UNBOUNDED_PREFIX = ExecutorService.class.getName()+".unboundedExecutorService-thread-",
-		PER_PROCESSOR_PREFIX = ExecutorService.class.getName()+".perProcessorExecutorService-thread-"
-	;
-
+	// <editor-fold defaultstate="collapsed" desc="ThreadFactory">
 	/*
 	 * The thread factories are created once so each thread gets a unique
 	 * identifier independent of creation and destruction of executors.
@@ -93,12 +94,12 @@ final public class ExecutorService implements Disposable {
 
 		// The thread group management was not compatible with an Applet environment
 		// final ThreadGroup group;
-		final Sequence threadNumber = new AtomicSequence();
 		final String namePrefix;
+		final Sequence threadNumber = new AtomicSequence();
 		final int priority;
 
 		PrefixThreadFactory(String namePrefix, int priority) {
-			SecurityManager s = System.getSecurityManager();
+			//SecurityManager s = System.getSecurityManager();
 			//this.group = (s != null)? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
 			this.namePrefix = namePrefix;
 			this.priority = priority;
@@ -106,58 +107,90 @@ final public class ExecutorService implements Disposable {
 
 		@Override
 		public Thread newThread(Runnable target) {
-			Thread t = new Thread(/*group, */target, namePrefix + threadNumber.getNextSequenceValue());
+			String name = namePrefix + threadNumber.getNextSequenceValue();
+			if(logger.isLoggable(Level.FINER)) logger.log(Level.FINER, "newThread={0}", name);
+			Thread t = new Thread(
+				/*group, */
+				target,
+				name
+			);
 			t.setPriority(priority);
 			t.setDaemon(DAEMON_THREADS);
 			return t;
 		}
 	}
 
-	private static final ThreadFactory unboundedThreadFactory = new PrefixThreadFactory(UNBOUNDED_PREFIX, Thread.NORM_PRIORITY) {
+	/**
+	 * Keeps track of which threads are running under unbounded thread pool.
+	 */
+	private static final ThreadLocal<Boolean> currentThreadUnbounded = new ThreadLocal<Boolean>() {
 		@Override
-		public Thread newThread(final Runnable target) {
-			return super.newThread(
-				new Runnable() {
-					@Override
-					public void run() {
-						isPerProcessor.set(Boolean.FALSE);
-						target.run();
-					}
-				}
-			);
+		protected Boolean initialValue() {
+			return Boolean.FALSE;
 		}
 	};
 
-	private static final ThreadFactory perProcessorThreadFactory = new PrefixThreadFactory(PER_PROCESSOR_PREFIX, Thread.NORM_PRIORITY) {
+	private static final PrefixThreadFactory unboundedThreadFactory = new PrefixThreadFactory(
+		ExecutorService.class.getName()+".unbounded-thread-",
+		Thread.NORM_PRIORITY
+	) {
 		@Override
-		public Thread newThread(final Runnable target) {
-			if(isPerProcessor.get()!=null) throw new AssertionError(); // If from either executor, request should be redirected to unbounded executor.
-			return super.newThread(
-				new Runnable() {
-					@Override
-					public void run() {
-						isPerProcessor.set(Boolean.TRUE);
-						target.run();
-					}
-				}
-			);
+		public Thread newThread(Runnable target) {
+			currentThreadUnbounded.set(Boolean.TRUE);
+			return super.newThread(target);
 		}
 	};
 
-	private static final Object privateLock = new Object();
+	/**
+	 * <p>
+	 * {@code null} when a thread is not from this ExecutorService or is not yet per-processor pool bound.
+	 * </p>
+	 * <p>
+	 * Keeps track of which per-processor thread pool the current thread is running
+	 * either directly, or indirect, under.  Any subsequent per-processor pool access
+	 * will use the next higher pool index.
+	 * </p>
+	 * <p>
+	 * A thread may be in both currentThreadUnbounded and currentThreadPerProcessorIndex, which will
+	 * happen when an unbounded task is added from a per-processor thread.
+	 * </p>
+	 */
+	private static final ThreadLocal<Integer> currentThreadPerProcessorIndex = new ThreadLocal<Integer>();
 
+	private static final List<PrefixThreadFactory> perProcessorThreadFactories = new AutoGrowArrayList<PrefixThreadFactory>();
+
+	private static PrefixThreadFactory getPerProcessorThreadFactory(int index) {
+		assert Thread.holdsLock(privateLock);
+		PrefixThreadFactory perProcessorThreadFactory;
+		if(index < perProcessorThreadFactories.size()) {
+			perProcessorThreadFactory = perProcessorThreadFactories.get(index);
+		} else {
+			perProcessorThreadFactory = null;
+		}
+		if(perProcessorThreadFactory == null) {
+			final Integer indexObj = index;
+			if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "new perProcessorThreadFactory: {0}", index);
+			perProcessorThreadFactory = new PrefixThreadFactory(
+				ExecutorService.class.getName()+".perProcessor-" + index + "-thread-",
+				Thread.NORM_PRIORITY
+			) {
+				@Override
+				public Thread newThread(Runnable target) {
+					currentThreadPerProcessorIndex.set(indexObj);
+					return super.newThread(target);
+				}
+			};
+			perProcessorThreadFactories.set(index, perProcessorThreadFactory);
+		}
+		return perProcessorThreadFactory;
+	}
+	// </editor-fold>
+
+	// <editor-fold defaultstate="collapsed" desc="Instance Management">
 	/**
 	 * The number of active executors is tracked, will shutdown when gets to zero.
 	 */
 	private static int activeCount = 0;
-
-	private static java.util.concurrent.ExecutorService unboundedExecutorService;
-	private static Thread unboundedShutdownHook;
-
-	private static java.util.concurrent.ExecutorService perProcessorExecutorService;
-	private static Thread perProcessorShutdownHook;
-
-	private static Timer timer;
 
 	/**
 	 * <p>
@@ -174,8 +207,8 @@ final public class ExecutorService implements Disposable {
 	 */
 	public static ExecutorService newInstance() {
 		synchronized(privateLock) {
-			if(activeCount<0) throw new AssertionError();
-			if(activeCount==Integer.MAX_VALUE) throw new IllegalStateException();
+			if(activeCount < 0) throw new AssertionError();
+			if(activeCount == Integer.MAX_VALUE) throw new IllegalStateException();
 			// Allocate before increment just in case of OutOfMemoryError
 			ExecutorService newInstance = new ExecutorService();
 			activeCount++;
@@ -183,6 +216,11 @@ final public class ExecutorService implements Disposable {
 			return newInstance;
 		}
 	}
+	// </editor-fold>
+
+	// <editor-fold defaultstate="collapsed" desc="ExecutorService">
+	private static java.util.concurrent.ExecutorService unboundedExecutorService;
+	private static Thread unboundedShutdownHook;
 
 	/**
 	 * Gets the unbounded concurrency executor service.  activeCount must be
@@ -192,63 +230,93 @@ final public class ExecutorService implements Disposable {
 	 */
 	private static java.util.concurrent.ExecutorService getUnboundedExecutorService() {
 		assert Thread.holdsLock(privateLock);
-		if(activeCount<1) throw new IllegalStateException();
-		if(unboundedExecutorService==null) {
+		if(activeCount < 1) throw new IllegalStateException();
+		if(unboundedExecutorService == null) {
 			java.util.concurrent.ExecutorService newExecutorService = Executors.newCachedThreadPool(unboundedThreadFactory);
-			Thread newShutdownHook = new ExecutorServiceShutdownHook(
+			Thread shutdownHook = new ExecutorServiceShutdownHook(
 				newExecutorService,
-				UNBOUNDED_PREFIX+"shutdownHook"
+				unboundedThreadFactory.namePrefix + "shutdownHook"
 			);
 			// Only keep instances once shutdown hook properly registered
 			try {
-				Runtime.getRuntime().addShutdownHook(newShutdownHook);
+				Runtime.getRuntime().addShutdownHook(shutdownHook);
 			} catch(SecurityException e) {
 				logger.log(Level.WARNING, null, e);
-				newShutdownHook = null;
+				shutdownHook = null;
 			}
 			unboundedExecutorService = newExecutorService;
-			unboundedShutdownHook = newShutdownHook;
+			unboundedShutdownHook = shutdownHook;
 		}
 		return unboundedExecutorService;
 	}
 
+	private static final AutoGrowArrayList<java.util.concurrent.ExecutorService> perProcessorExecutorServices = new AutoGrowArrayList<java.util.concurrent.ExecutorService>();
+	private static final AutoGrowArrayList<Thread> perProcessorShutdownHooks = new AutoGrowArrayList<Thread>();
+
 	/**
 	 * Resolves the correct executor to use for a per-processor request.
-	 * If current thread is from either the unbounded or per-processor, will
-	 * return unbounded.  Otherwise, will return per-processor.
 	 *
 	 * Must be holding privateLock.
 	 */
 	private static java.util.concurrent.ExecutorService getPerProcessorExecutorService() {
 		assert Thread.holdsLock(privateLock);
-		if(isPerProcessor.get()!=null) {
-			if(logger.isLoggable(Level.FINE)) logger.fine("Using unbounded executor instead of per-processor executor to avoid potential deadlock.");
-			return getUnboundedExecutorService();
-		} else {
-			if(logger.isLoggable(Level.FINE)) logger.fine("Using per-processor executor.");
-			if(activeCount<1) throw new IllegalStateException();
-			if(perProcessorExecutorService==null) {
-				java.util.concurrent.ExecutorService newExecutorService = Executors.newFixedThreadPool(
-					RuntimeUtils.getAvailableProcessors() * THREADS_PER_PROCESSOR,
+		if(activeCount < 1) throw new IllegalStateException();
+		int index;
+		{
+			Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
+			if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
+			index = (perProcessorIndex == null) ? 0 : (perProcessorIndex + 1);
+			if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "index={0}", index);
+		}
+		java.util.concurrent.ExecutorService perProcessorExecutorService = perProcessorExecutorServices.get(index);
+		if(perProcessorExecutorService == null) {
+			PrefixThreadFactory perProcessorThreadFactory = getPerProcessorThreadFactory(index);
+			int numThreads = RuntimeUtils.getAvailableProcessors() * THREADS_PER_PROCESSOR;
+			if(logger.isLoggable(Level.FINEST)) {
+				logger.log(
+					Level.FINEST,
+					"new perProcessorExecutorService: index={0}, numThreads={1}",
+					new Object[] {
+						index,
+						numThreads
+					}
+				);
+			}
+			if(index == 0) {
+				// Top level perProcessor will keep all threads going
+				perProcessorExecutorService = Executors.newFixedThreadPool(
+					numThreads,
 					perProcessorThreadFactory
 				);
-				Thread newShutdownHook = new ExecutorServiceShutdownHook(
-					newExecutorService,
-					PER_PROCESSOR_PREFIX+"shutdownHook"
+			} else {
+				// Other levels will shutdown threads after 60 seconds of inactivity
+				perProcessorExecutorService = new ThreadPoolExecutor(
+					0, numThreads,
+					60L, TimeUnit.SECONDS,
+					new LinkedBlockingQueue<Runnable>(),
+					perProcessorThreadFactory
 				);
-				// Only keep instances once shutdown hook properly registered
-				try {
-					Runtime.getRuntime().addShutdownHook(newShutdownHook);
-				} catch(SecurityException e) {
-					logger.log(Level.WARNING, null, e);
-					newShutdownHook = null;
-				}
-				perProcessorExecutorService = newExecutorService;
-				perProcessorShutdownHook = newShutdownHook;
 			}
-			return perProcessorExecutorService;
+			Thread shutdownHook = new ExecutorServiceShutdownHook(
+				perProcessorExecutorService,
+				perProcessorThreadFactory + "shutdownHook"
+			);
+			// Only keep instances once shutdown hook properly registered
+			try {
+				Runtime.getRuntime().addShutdownHook(shutdownHook);
+			} catch(SecurityException e) {
+				logger.log(Level.WARNING, null, e);
+				shutdownHook = null;
+			}
+			if(perProcessorExecutorServices.set(index, perProcessorExecutorService) != null) throw new AssertionError();
+			if(perProcessorShutdownHooks.set(index, shutdownHook) != null) throw new AssertionError();
 		}
+		return perProcessorExecutorService;
 	}
+	// </editor-fold>
+
+	// <editor-fold defaultstate="collapsed" desc="Timer">
+	private static Timer timer;
 
 	/**
 	 * Gets the timer.  activeCount must be greater than zero.
@@ -257,10 +325,11 @@ final public class ExecutorService implements Disposable {
 	 */
 	private static Timer getTimer() {
 		assert Thread.holdsLock(privateLock);
-		if(activeCount<1) throw new IllegalStateException();
+		if(activeCount <= 0) throw new IllegalStateException();
 		if(timer==null) timer = new Timer(DAEMON_THREADS);
 		return timer;
 	}
+	// </editor-fold>
 
 	/**
 	 * Set to true when dispose called.
@@ -389,10 +458,10 @@ final public class ExecutorService implements Disposable {
 
 	abstract class IncompleteTimerTask<V> extends TimerTask implements Future<V> {
 
-		final Long incompleteFutureId;
-		protected final Object incompleteLock = new Object();
-		boolean canceled = false;
-		Future<V> future; // Only available once submitted
+		protected final Long incompleteFutureId;
+		private final Object incompleteLock = new Object();
+		private boolean canceled = false;
+		private Future<V> future; // Only available once submitted
 
 		IncompleteTimerTask(Long incompleteFutureId) {
 			this.incompleteFutureId = incompleteFutureId;
@@ -466,7 +535,7 @@ final public class ExecutorService implements Disposable {
 				c = canceled;
 				f = future;
 			}
-			return f==null ? canceled : f.isDone();
+			return f==null ? c : f.isDone();
 		}
 
 		@Override
@@ -491,7 +560,7 @@ final public class ExecutorService implements Disposable {
 			synchronized(incompleteLock) {
 				while(future==null) {
 					long nanosRemaining = waitUntil - System.nanoTime();
-					if(nanosRemaining<0) throw new TimeoutException();
+					if(nanosRemaining < 0) throw new TimeoutException();
 					incompleteLock.wait(nanosRemaining / 1000000, (int)(nanosRemaining % 1000000));
 				}
 				f = future;
@@ -590,10 +659,30 @@ final public class ExecutorService implements Disposable {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	public <T> Future<T> submitUnbounded(Callable<T> task) throws DisposedException {
+	public <T> Future<T> submitUnbounded(final Callable<T> task) throws DisposedException {
+		final Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
+		if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
+		Callable<T> taskSelected;
+		if(perProcessorIndex != null) {
+			// Avoid deadlock: Maintain which perProcessor thread pool this task came from
+			taskSelected = new Callable<T>() {
+				@Override
+				public T call() throws Exception {
+					assert currentThreadPerProcessorIndex.get() == null;
+					currentThreadPerProcessorIndex.set(perProcessorIndex);
+					try {
+						return task.call();
+					} finally {
+						currentThreadPerProcessorIndex.set(null);
+					}
+				}
+			};
+		} else {
+			taskSelected = task;
+		}
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getUnboundedExecutorService(), task);
+			return submit(getUnboundedExecutorService(), taskSelected);
 		}
 	}
 
@@ -604,12 +693,33 @@ final public class ExecutorService implements Disposable {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	public <T> Future<T> submitUnbounded(Callable<T> task, long delay) throws DisposedException {
+	public <T> Future<T> submitUnbounded(final Callable<T> task, long delay) throws DisposedException {
+		final Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
+		if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
+		Callable<T> taskSelected;
+		if(perProcessorIndex != null) {
+			// Avoid deadlock: Maintain which perProcessor thread pool this task came from
+			taskSelected = new Callable<T>() {
+				@Override
+				public T call() throws Exception {
+					assert currentThreadPerProcessorIndex.get() == null;
+					currentThreadPerProcessorIndex.set(perProcessorIndex);
+					try {
+						return task.call();
+					} finally {
+						currentThreadPerProcessorIndex.set(null);
+					}
+				}
+			};
+		} else {
+			taskSelected = task;
+		}
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getUnboundedExecutorService(), task, delay);
+			return submit(getUnboundedExecutorService(), taskSelected, delay);
 		}
 	}
+
 	/**
 	 * Submits to an unbounded executor service.
 	 * This is most appropriate for I/O bound tasks, especially higher latency
@@ -617,10 +727,30 @@ final public class ExecutorService implements Disposable {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	public Future<?> submitUnbounded(Runnable task) throws DisposedException {
+	public Future<?> submitUnbounded(final Runnable task) throws DisposedException {
+		final Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
+		if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
+		Runnable taskSelected;
+		if(perProcessorIndex != null) {
+			// Avoid deadlock: Maintain which perProcessor thread pool this task came from
+			taskSelected = new Runnable() {
+				@Override
+				public void run() {
+					assert currentThreadPerProcessorIndex.get() == null;
+					currentThreadPerProcessorIndex.set(perProcessorIndex);
+					try {
+						task.run();
+					} finally {
+						currentThreadPerProcessorIndex.set(null);
+					}
+				}
+			};
+		} else {
+			taskSelected = task;
+		}
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getUnboundedExecutorService(), task);
+			return submit(getUnboundedExecutorService(), taskSelected);
 		}
 	}
 
@@ -631,33 +761,59 @@ final public class ExecutorService implements Disposable {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	public Future<?> submitUnbounded(Runnable task, long delay) throws DisposedException {
+	public Future<?> submitUnbounded(final Runnable task, long delay) throws DisposedException {
+		final Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
+		if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
+		Runnable taskSelected;
+		if(perProcessorIndex != null) {
+			// Avoid deadlock: Maintain which perProcessor thread pool this task came from
+			taskSelected = new Runnable() {
+				@Override
+				public void run() {
+					assert currentThreadPerProcessorIndex.get() == null;
+					currentThreadPerProcessorIndex.set(perProcessorIndex);
+					try {
+						task.run();
+					} finally {
+						currentThreadPerProcessorIndex.set(null);
+					}
+				}
+			};
+		} else {
+			taskSelected = task;
+		}
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getUnboundedExecutorService(), task, delay);
+			return submit(getUnboundedExecutorService(), taskSelected, delay);
 		}
 	}
 	// </editor-fold>
 
 	// <editor-fold defaultstate="collapsed" desc="Per-processor">
 	/**
+	 * <p>
 	 * Submits to an executor service that will execute at most two tasks per processor.
 	 * This should be used for CPU-bound tasks that generally operate non-blocking.
 	 * If a thread blocks or deadlocks, it can starve the system entirely - use this
 	 * cautiously.
-	 *
-	 * If a task is submitted by a thread that is already part of the per-processor executor,
-	 * the task will be executed on the unbounded executor to avoid potential deadlock.
-	 *
-	 * To avoid the potential deadlock caused by the loop caller -> per-processor -> unbounded -> per-processor (deadlock),
-	 * any request from the unbounded executor to the per-processor executor will also
-	 * be redirected to the unbounded.  Thus, the system has a tendency toward unbounded
-	 * operation in complex setups.  The per-processor executor is most effectively applied
-	 * at the highest possible point of task distribution.
+	 * </p>
+	 * <p>
+	 * If a task is submitted by a thread that is already part of a per-processor executor,
+	 * it will be invoked on a different per-processor executor to avoid potential deadlock.
+	 * This means the total number of threads can exceed two tasks per processor, but it will
+	 * remain bounded as a function of:
+	 * </p>
+	 * <pre>
+	 * maxThreads = maxPerProcessorDepth * numProcessors * 2
+	 * </pre>
+	 * <p>
+	 * Where maxPerProcessorDepth is a function of the number of times a per-processor task adds
+	 * a per-processor task of its own.
+	 * </p>
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	public <T> Future<T> submitPerProcessor(final Callable<T> task) throws DisposedException {
+	public <T> Future<T> submitPerProcessor(Callable<T> task) throws DisposedException {
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
 			return submit(getPerProcessorExecutorService(), task);
@@ -665,43 +821,85 @@ final public class ExecutorService implements Disposable {
 	}
 
 	/**
-	 * Submits to an executor service that will execute at most two tasks per processor.
-	 * This should be used for CPU-bound tasks that generally operate non-blocking.
-	 * If a thread blocks or deadlocks, it can starve the system entirely - use this
-	 * cautiously.
-	 *
-	 * If a task is submitted by a thread that is already part of the per-processor executor,
-	 * the task will be executed on the unbounded executor to avoid potential deadlock.
-	 *
-	 * To avoid the potential deadlock caused by the loop caller -> per-processor -> unbounded -> per-processor (deadlock),
-	 * any request from the unbounded executor to the per-processor executor will also
-	 * be redirected to the unbounded.  Thus, the system has a tendency toward unbounded
-	 * operation in complex setups.  The per-processor executor is most effectively applied
-	 * at the highest possible point of task distribution.
-	 *
-	 * @exception  DisposedException  if already disposed.
-	 */
-	public Future<?> submitPerProcessor(final Runnable task) throws DisposedException {
-		synchronized(privateLock) {
-			if(disposed) throw new DisposedException();
-			return submit(getPerProcessorExecutorService(), task);
-		}
-	}
-
-	/**
+	 * <p>
 	 * Submits to an executor service that will execute at most two tasks per processor after the provided delay.
 	 * This should be used for CPU-bound tasks that generally operate non-blocking.
 	 * If a thread blocks or deadlocks, it can starve the system entirely - use this
 	 * cautiously.
+	 * </p>
+	 * <p>
+	 * If a task is submitted by a thread that is already part of a per-processor executor,
+	 * it will be invoked on a different per-processor executor to avoid potential deadlock.
+	 * This means the total number of threads can exceed two tasks per processor, but it will
+	 * remain bounded as a function of:
+	 * </p>
+	 * <pre>
+	 * maxThreads = maxPerProcessorDepth * numProcessors * 2
+	 * </pre>
+	 * <p>
+	 * Where maxPerProcessorDepth is a function of the number of times a per-processor task adds
+	 * a per-processor task of its own.
+	 * </p>
 	 *
-	 * If a task is submitted by a thread that is already part of the per-processor executor,
-	 * the task will be executed on the unbounded executor to avoid potential deadlock.
+	 * @exception  DisposedException  if already disposed.
+	 */
+	public <T> Future<T> submitPerProcessor(Callable<T> task, long delay) throws DisposedException {
+		synchronized(privateLock) {
+			if(disposed) throw new DisposedException();
+			return submit(getPerProcessorExecutorService(), task, delay);
+		}
+	}
+
+	/**
+	 * <p>
+	 * Submits to an executor service that will execute at most two tasks per processor.
+	 * This should be used for CPU-bound tasks that generally operate non-blocking.
+	 * If a thread blocks or deadlocks, it can starve the system entirely - use this
+	 * cautiously.
+	 * </p>
+	 * <p>
+	 * If a task is submitted by a thread that is already part of a per-processor executor,
+	 * it will be invoked on a different per-processor executor to avoid potential deadlock.
+	 * This means the total number of threads can exceed two tasks per processor, but it will
+	 * remain bounded as a function of:
+	 * </p>
+	 * <pre>
+	 * maxThreads = maxPerProcessorDepth * numProcessors * 2
+	 * </pre>
+	 * <p>
+	 * Where maxPerProcessorDepth is a function of the number of times a per-processor task adds
+	 * a per-processor task of its own.
+	 * </p>
 	 *
-	 * To avoid the potential deadlock caused by the loop caller -> per-processor -> unbounded -> per-processor (deadlock),
-	 * any request from the unbounded executor to the per-processor executor will also
-	 * be redirected to the unbounded.  Thus, the system has a tendency toward unbounded
-	 * operation in complex setups.  The per-processor executor is most effectively applied
-	 * at the highest possible point of task distribution.
+	 * @exception  DisposedException  if already disposed.
+	 */
+	public Future<?> submitPerProcessor(Runnable task) throws DisposedException {
+		synchronized(privateLock) {
+			if(disposed) throw new DisposedException();
+			return submit(getPerProcessorExecutorService(), task);
+		}
+	}
+
+	/**
+	 * <p>
+	 * Submits to an executor service that will execute at most two tasks per processor after the provided delay.
+	 * This should be used for CPU-bound tasks that generally operate non-blocking.
+	 * If a thread blocks or deadlocks, it can starve the system entirely - use this
+	 * cautiously.
+	 * </p>
+	 * <p>
+	 * If a task is submitted by a thread that is already part of a per-processor executor,
+	 * it will be invoked on a different per-processor executor to avoid potential deadlock.
+	 * This means the total number of threads can exceed two tasks per processor, but it will
+	 * remain bounded as a function of:
+	 * </p>
+	 * <pre>
+	 * maxThreads = maxPerProcessorDepth * numProcessors * 2
+	 * </pre>
+	 * <p>
+	 * Where maxPerProcessorDepth is a function of the number of times a per-processor task adds
+	 * a per-processor task of its own.
+	 * </p>
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
@@ -719,9 +917,12 @@ final public class ExecutorService implements Disposable {
 	 * tasks may be submitted.
 	 *
 	 * If this is the last active executor, the underlying threads will also be shutdown.
-	 * This shutdown may wait up to 200 milliseconds for clean termination of all threads.
+	 * This shutdown may wait up to <code>(1 + numPerProcessorPools) * DISPOSE_WAIT_NANOS</code>
+	 * for clean termination of all threads.
 	 *
 	 * If already disposed, no action will be taken and no exception thrown.
+	 *
+	 * @see  DISPOSE_WAIT_NANOS
 	 */
 	@Override
 	public void dispose() {
@@ -729,13 +930,13 @@ final public class ExecutorService implements Disposable {
 		synchronized(privateLock) {
 			if(!disposed) {
 				disposed = true;
-				if(activeCount<=0) throw new AssertionError();
+				if(activeCount <= 0) throw new AssertionError();
 				--activeCount;
 				if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "activeCount={0}", activeCount);
 
-				if(activeCount==0) {
+				if(activeCount == 0) {
 					final java.util.concurrent.ExecutorService ues = unboundedExecutorService;
-					if(ues!=null) {
+					if(ues != null) {
 						final Thread ush = unboundedShutdownHook;
 						Runnable uesShutdown = new Runnable() {
 							@Override
@@ -746,8 +947,9 @@ final public class ExecutorService implements Disposable {
 									logger.log(Level.WARNING, null, e);
 								}
 								try {
+									if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "awaiting termination of unboundedExecutorService");
 									if(ues.awaitTermination(DISPOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
-										if(ush!=null) {
+										if(ush != null) {
 											try {
 												Runtime.getRuntime().removeShutdownHook(ush);
 											} catch(IllegalStateException e) {
@@ -765,52 +967,65 @@ final public class ExecutorService implements Disposable {
 						unboundedExecutorService = null;
 						unboundedShutdownHook = null;
 						// Never wait for own thread (causes stall every time)
-						if(isPerProcessor.get()!=null) {
+						if(currentThreadUnbounded.get()) {
 							new Thread(uesShutdown).start();
 						} else {
 							// OK to use current thread directly
 							uesShutdown.run();
 						}
 					}
-					final java.util.concurrent.ExecutorService ppes = perProcessorExecutorService;
-					if(ppes!=null) {
-						final Thread ppsh = perProcessorShutdownHook;
-						Runnable ppesShutdown = new Runnable() {
-							@Override
-							public void run() {
-								try {
-									ppes.shutdown();
-								} catch(SecurityException e) {
-									logger.log(Level.WARNING, null, e);
-								}
-								try {
-									if(ppes.awaitTermination(DISPOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
-										if(ppsh!=null) {
-											try {
-												Runtime.getRuntime().removeShutdownHook(ppsh);
-											} catch(IllegalStateException e) {
-												// System shutting down, can't remove hook
-											} catch(SecurityException e) {
-												logger.log(Level.WARNING, null, e);
+					// Going backwards, to clean up deepest depth tasks first, giving other tasks a chance to finish during cleanup
+					for(int i = perProcessorExecutorServices.size()-1; i >= 0; --i) {
+						final int index = i;
+						final java.util.concurrent.ExecutorService ppes = perProcessorExecutorServices.get(index);
+						if(ppes != null) {
+							final Thread ppsh = perProcessorShutdownHooks.get(index);
+							Runnable ppesShutdown = new Runnable() {
+								@Override
+								public void run() {
+									try {
+										ppes.shutdown();
+									} catch(SecurityException e) {
+										logger.log(Level.WARNING, null, e);
+									}
+									try {
+										if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "awaiting termination of perProcessorExecutorServices[{0}]", index);
+										if(ppes.awaitTermination(DISPOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
+											if(ppsh != null) {
+												try {
+													Runtime.getRuntime().removeShutdownHook(ppsh);
+												} catch(IllegalStateException e) {
+													// System shutting down, can't remove hook
+												} catch(SecurityException e) {
+													logger.log(Level.WARNING, null, e);
+												}
 											}
 										}
+									} catch(InterruptedException e) {
+										logger.log(Level.WARNING, null, e);
 									}
-								} catch(InterruptedException e) {
-									logger.log(Level.WARNING, null, e);
 								}
+							};
+							perProcessorExecutorServices.set(index, null);
+							perProcessorShutdownHooks.set(index, null);
+							// Never wait for own thread (causes stall every time)
+							Integer currentThreadIndex = currentThreadPerProcessorIndex.get();
+							if(currentThreadIndex != null && currentThreadIndex == index) {
+								new Thread(ppesShutdown).start();
+							} else {
+								// OK to use current thread directly
+								ppesShutdown.run();
 							}
-						};
-						perProcessorExecutorService = null;
-						perProcessorShutdownHook = null;
-						// Never wait for own thread (causes stall every time)
-						if(isPerProcessor.get()!=null) {
-							new Thread(ppesShutdown).start();
-						} else {
-							// OK to use current thread directly
-							ppesShutdown.run();
 						}
 					}
-					if(timer!=null) {
+					// All elements of list are null now, trim size to be tidy after disposal.
+					perProcessorExecutorServices.clear();
+					perProcessorExecutorServices.trimToSize();
+					perProcessorShutdownHooks.clear();
+					perProcessorShutdownHooks.trimToSize();
+					// Stop timer
+					if(timer != null) {
+						if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "Canceling timer");
 						timer.cancel();
 						timer = null;
 					}
@@ -828,40 +1043,54 @@ final public class ExecutorService implements Disposable {
 				incompleteFutures.clear();
 			}
 		}
-		if(
-			waitFutures!=null
+		if(waitFutures != null) {
 			// Never wait for own thread (causes stall every time)
-			&& isPerProcessor.get()==null
-		) {
-			final long waitUntil = System.nanoTime() + DISPOSE_WAIT_NANOS;
-			// Wait for our incomplete tasks to complete.
-			// This is done while not holding privateLock to avoid deadlock.
-			for(Future<?> future : waitFutures) {
-				long nanosRemaining = waitUntil - System.nanoTime();
-				if(nanosRemaining>=0) {
-					try {
-						future.get(nanosRemaining, TimeUnit.NANOSECONDS);
-					} catch(CancellationException e) {
-						// OK on shutdown
-					} catch(ExecutionException e) {
-						// OK on shutdown
-					} catch(InterruptedException e) {
-						// OK on shutdown
-					} catch(TimeoutException e) {
-						// Cancel after timeout
-						//logger.log(Level.WARNING, null, e);
+			// TODO: Is it worth a more specific avoidance of skipping waiting only for incomplete tasks exactly matching the current thread?
+			if(currentThreadUnbounded.get()) {
+				if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "Skipping waitFutures from thread of unboundedExecutorService");
+			} else if(currentThreadPerProcessorIndex.get() == null) {
+				if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "Skipping waitFutures from thread of perProcessorExecutorServices[{0}]", currentThreadPerProcessorIndex.get());
+			} else {
+				final long waitUntil = System.nanoTime() + DISPOSE_WAIT_NANOS;
+				// Wait for our incomplete tasks to complete.
+				// This is done while not holding privateLock to avoid deadlock.
+				for(int i=0, size=waitFutures.size(); i<size; i++) {
+					Future<?> future = waitFutures.get(i);
+					long nanosRemaining = waitUntil - System.nanoTime();
+					if(nanosRemaining >= 0) {
+						if(logger.isLoggable(Level.FINE)) logger.log(
+							Level.FINE,
+							"Waiting on waitFuture[{0}], {1} ns remaining",
+							new Object[] {
+								i,
+								nanosRemaining
+							}
+						);
+						try {
+							future.get(nanosRemaining, TimeUnit.NANOSECONDS);
+						} catch(CancellationException e) {
+							// OK on shutdown
+						} catch(ExecutionException e) {
+							// OK on shutdown
+						} catch(InterruptedException e) {
+							// OK on shutdown
+						} catch(TimeoutException e) {
+							// Cancel after timeout
+							//logger.log(Level.WARNING, null, e);
+							future.cancel(true);
+						}
+					} else {
+						// No time remaining, just cancel
+						if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "No time left, canceling waitFuture[{0}]", i);
 						future.cancel(true);
 					}
-				} else {
-					// No time remaining, just cancel
-					future.cancel(true);
 				}
 			}
 		}
 	}
 
 	/**
-	 * Don't rely on the finalizer - this is just in case something is way off
+	 * Do not rely on the finalizer - this is just in case something is way off
 	 * and the calling code doesn't correctly dispose their instances.
 	 */
 	@Override
