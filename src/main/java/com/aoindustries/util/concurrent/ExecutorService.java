@@ -28,6 +28,8 @@ import com.aoindustries.lang.RuntimeUtils;
 import com.aoindustries.util.AtomicSequence;
 import com.aoindustries.util.AutoGrowArrayList;
 import com.aoindustries.util.Sequence;
+import com.aoindustries.util.i18n.I18nThreadLocalCallable;
+import com.aoindustries.util.i18n.I18nThreadLocalRunnable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,7 +60,7 @@ import java.util.logging.Logger;
  * Also allows for delayed execution of tasks using an internal Timer.
  * </p>
  */
-final public class ExecutorService implements Disposable {
+public class ExecutorService implements Disposable {
 
 	private static final Logger logger = Logger.getLogger(ExecutorService.class.getName());
 	static {
@@ -193,8 +195,16 @@ final public class ExecutorService implements Disposable {
 	private static int activeCount = 0;
 
 	/**
+	 * @deprecated  Just use constructor directly.  Subclasses are now allowed, too.
+	 */
+	@Deprecated
+	public static ExecutorService newInstance() {
+		return new ExecutorService();
+	}
+
+	/**
 	 * <p>
-	 * Gets a new instance of the executor service.  <code>dispose()</code> must be called
+	 * Create a new instance of the executor service.  <code>dispose()</code> must be called
 	 * when done with the instance.  This should be done in a try-finally or strong
 	 * equivalent, such as <code>Servlet.destroy()</code>.
 	 * </p>
@@ -205,15 +215,12 @@ final public class ExecutorService implements Disposable {
 	 *
 	 * @see  #dispose()
 	 */
-	public static ExecutorService newInstance() {
+	public ExecutorService() {
 		synchronized(privateLock) {
 			if(activeCount < 0) throw new AssertionError();
 			if(activeCount == Integer.MAX_VALUE) throw new IllegalStateException();
-			// Allocate before increment just in case of OutOfMemoryError
-			ExecutorService newInstance = new ExecutorService();
 			activeCount++;
 			if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "activeCount={0}", activeCount);
-			return newInstance;
 		}
 	}
 	// </editor-fold>
@@ -268,7 +275,7 @@ final public class ExecutorService implements Disposable {
 			index = (perProcessorIndex == null) ? 0 : (perProcessorIndex + 1);
 			if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "index={0}", index);
 		}
-		java.util.concurrent.ExecutorService perProcessorExecutorService = perProcessorExecutorServices.get(index);
+		java.util.concurrent.ExecutorService perProcessorExecutorService = index < perProcessorExecutorServices.size() ? perProcessorExecutorServices.get(index) : null;
 		if(perProcessorExecutorService == null) {
 			PrefixThreadFactory perProcessorThreadFactory = getPerProcessorThreadFactory(index);
 			int numThreads = RuntimeUtils.getAvailableProcessors() * THREADS_PER_PROCESSOR;
@@ -335,12 +342,6 @@ final public class ExecutorService implements Disposable {
 	 * Set to true when dispose called.
 	 */
 	private boolean disposed = false;
-
-	/**
-	 * @see  #newInstance()
-	 */
-	private ExecutorService() {
-	}
 
 	// <editor-fold defaultstate="collapsed" desc="Incomplete Futures">
 	/**
@@ -570,12 +571,12 @@ final public class ExecutorService implements Disposable {
 		}
 	}
 
-	class IncompleteRunnableTimerTask extends IncompleteTimerTask<Object> {
+	class IncompleteCallableTimerTask<V> extends IncompleteTimerTask<V> {
 
 		final java.util.concurrent.ExecutorService executor;
-		final Runnable task;
+		final Callable<V> task;
 
-		IncompleteRunnableTimerTask(Long incompleteFutureId, java.util.concurrent.ExecutorService executor, Runnable task) {
+		IncompleteCallableTimerTask(Long incompleteFutureId, java.util.concurrent.ExecutorService executor, Callable<V> task) {
 			super(incompleteFutureId);
 			this.executor = executor;
 			this.task = task;
@@ -596,12 +597,12 @@ final public class ExecutorService implements Disposable {
 		}
 	}
 
-	class IncompleteCallableTimerTask<V> extends IncompleteTimerTask<V> {
+	class IncompleteRunnableTimerTask extends IncompleteTimerTask<Object> {
 
 		final java.util.concurrent.ExecutorService executor;
-		final Callable<V> task;
+		final Runnable task;
 
-		IncompleteCallableTimerTask(Long incompleteFutureId, java.util.concurrent.ExecutorService executor, Callable<V> task) {
+		IncompleteRunnableTimerTask(Long incompleteFutureId, java.util.concurrent.ExecutorService executor, Runnable task) {
 			super(incompleteFutureId);
 			this.executor = executor;
 			this.task = task;
@@ -651,38 +652,58 @@ final public class ExecutorService implements Disposable {
 	}
 	// </editor-fold>
 
+	// <editor-fold defaultstate="collapsed" desc="Task Wrappers">
+	/**
+	 * Wraps the task with any other necessary tasks to prepare or cleanup for the task.
+	 *
+	 * @see  I18nThreadLocalCallable This default implementation maintains internationalization context.
+	 */
+	protected <T> Callable<T> wrap(Callable<T> task) {
+		return new I18nThreadLocalCallable<T>(task);
+	}
+
+	/**
+	 * Wraps the task with any other necessary tasks to prepare or cleanup for the task.
+	 *
+	 * @see  I18nThreadLocalRunnable This default implementation maintains internationalization context.
+	 */
+	protected Runnable wrap(Runnable task) {
+		return new I18nThreadLocalRunnable(task);
+	}
+	// </editor-fold>
+	
 	// <editor-fold defaultstate="collapsed" desc="Unbounded">
 	/**
+	 * Avoid deadlock: Maintain which perProcessor thread pool this task came from
+	 */
+	private static class PerProcessorCallable<T> extends ThreadLocalCallable<T> {
+		private PerProcessorCallable(Callable<T> task) {
+			super(task, currentThreadPerProcessorIndex);
+		}
+	}
+
+	/**
+	 * Avoid deadlock: Maintain which perProcessor thread pool this task came from
+	 */
+	private static class PerProcessorRunnable extends ThreadLocalRunnable {
+		private PerProcessorRunnable(Runnable task) {
+			super(task, currentThreadPerProcessorIndex);
+		}
+	}
+
+	/**
 	 * Submits to an unbounded executor service.
 	 * This is most appropriate for I/O bound tasks, especially higher latency
 	 * I/O like wide area networks.
+	 * 
+	 * @see  I18nThreadLocalCallable  Maintains internationalization context.
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	public <T> Future<T> submitUnbounded(final Callable<T> task) throws DisposedException {
-		final Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
-		if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
-		Callable<T> taskSelected;
-		if(perProcessorIndex != null) {
-			// Avoid deadlock: Maintain which perProcessor thread pool this task came from
-			taskSelected = new Callable<T>() {
-				@Override
-				public T call() throws Exception {
-					assert currentThreadPerProcessorIndex.get() == null;
-					currentThreadPerProcessorIndex.set(perProcessorIndex);
-					try {
-						return task.call();
-					} finally {
-						currentThreadPerProcessorIndex.set(null);
-					}
-				}
-			};
-		} else {
-			taskSelected = task;
-		}
+	public <T> Future<T> submitUnbounded(Callable<T> task) throws DisposedException {
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getUnboundedExecutorService(), taskSelected);
+			return submit(getUnboundedExecutorService(), wrap(new PerProcessorCallable<T>(task)));
 		}
 	}
 
@@ -693,30 +714,10 @@ final public class ExecutorService implements Disposable {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	public <T> Future<T> submitUnbounded(final Callable<T> task, long delay) throws DisposedException {
-		final Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
-		if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
-		Callable<T> taskSelected;
-		if(perProcessorIndex != null) {
-			// Avoid deadlock: Maintain which perProcessor thread pool this task came from
-			taskSelected = new Callable<T>() {
-				@Override
-				public T call() throws Exception {
-					assert currentThreadPerProcessorIndex.get() == null;
-					currentThreadPerProcessorIndex.set(perProcessorIndex);
-					try {
-						return task.call();
-					} finally {
-						currentThreadPerProcessorIndex.set(null);
-					}
-				}
-			};
-		} else {
-			taskSelected = task;
-		}
+	public <T> Future<T> submitUnbounded(Callable<T> task, long delay) throws DisposedException {
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getUnboundedExecutorService(), taskSelected, delay);
+			return submit(getUnboundedExecutorService(), wrap(new PerProcessorCallable<T>(task)), delay);
 		}
 	}
 
@@ -727,30 +728,10 @@ final public class ExecutorService implements Disposable {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	public Future<?> submitUnbounded(final Runnable task) throws DisposedException {
-		final Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
-		if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
-		Runnable taskSelected;
-		if(perProcessorIndex != null) {
-			// Avoid deadlock: Maintain which perProcessor thread pool this task came from
-			taskSelected = new Runnable() {
-				@Override
-				public void run() {
-					assert currentThreadPerProcessorIndex.get() == null;
-					currentThreadPerProcessorIndex.set(perProcessorIndex);
-					try {
-						task.run();
-					} finally {
-						currentThreadPerProcessorIndex.set(null);
-					}
-				}
-			};
-		} else {
-			taskSelected = task;
-		}
+	public Future<?> submitUnbounded(Runnable task) throws DisposedException {
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getUnboundedExecutorService(), taskSelected);
+			return submit(getUnboundedExecutorService(), wrap(new PerProcessorRunnable(task)));
 		}
 	}
 
@@ -761,30 +742,10 @@ final public class ExecutorService implements Disposable {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	public Future<?> submitUnbounded(final Runnable task, long delay) throws DisposedException {
-		final Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
-		if(logger.isLoggable(Level.FINEST)) logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
-		Runnable taskSelected;
-		if(perProcessorIndex != null) {
-			// Avoid deadlock: Maintain which perProcessor thread pool this task came from
-			taskSelected = new Runnable() {
-				@Override
-				public void run() {
-					assert currentThreadPerProcessorIndex.get() == null;
-					currentThreadPerProcessorIndex.set(perProcessorIndex);
-					try {
-						task.run();
-					} finally {
-						currentThreadPerProcessorIndex.set(null);
-					}
-				}
-			};
-		} else {
-			taskSelected = task;
-		}
+	public Future<?> submitUnbounded(Runnable task, long delay) throws DisposedException {
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getUnboundedExecutorService(), taskSelected, delay);
+			return submit(getUnboundedExecutorService(), wrap(new PerProcessorRunnable(task)), delay);
 		}
 	}
 	// </editor-fold>
@@ -816,7 +777,7 @@ final public class ExecutorService implements Disposable {
 	public <T> Future<T> submitPerProcessor(Callable<T> task) throws DisposedException {
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getPerProcessorExecutorService(), task);
+			return submit(getPerProcessorExecutorService(), wrap(task));
 		}
 	}
 
@@ -846,7 +807,7 @@ final public class ExecutorService implements Disposable {
 	public <T> Future<T> submitPerProcessor(Callable<T> task, long delay) throws DisposedException {
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getPerProcessorExecutorService(), task, delay);
+			return submit(getPerProcessorExecutorService(), wrap(task), delay);
 		}
 	}
 
@@ -876,7 +837,7 @@ final public class ExecutorService implements Disposable {
 	public Future<?> submitPerProcessor(Runnable task) throws DisposedException {
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getPerProcessorExecutorService(), task);
+			return submit(getPerProcessorExecutorService(), wrap(task));
 		}
 	}
 
@@ -906,21 +867,25 @@ final public class ExecutorService implements Disposable {
 	public Future<?> submitPerProcessor(Runnable task, long delay) throws DisposedException {
 		synchronized(privateLock) {
 			if(disposed) throw new DisposedException();
-			return submit(getPerProcessorExecutorService(), task, delay);
+			return submit(getPerProcessorExecutorService(), wrap(task), delay);
 		}
 	}
 	// </editor-fold>
 
 	// <editor-fold defaultstate="collapsed" desc="Dispose">
 	/**
+	 * <p>
 	 * Disposes of this executor service instance.  Once disposed, no additional
-	 * tasks may be submitted.
-	 *
+	 * tasks may be submitted.  Any overriding method must call super.dispose().
+	 * </p>
+	 * <p>
 	 * If this is the last active executor, the underlying threads will also be shutdown.
 	 * This shutdown may wait up to <code>(1 + numPerProcessorPools) * DISPOSE_WAIT_NANOS</code>
 	 * for clean termination of all threads.
-	 *
+	 * </p>
+	 * <p>
 	 * If already disposed, no action will be taken and no exception thrown.
+	 * </p>
 	 *
 	 * @see  DISPOSE_WAIT_NANOS
 	 */
