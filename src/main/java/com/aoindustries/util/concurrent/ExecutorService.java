@@ -63,9 +63,6 @@ import java.util.logging.Logger;
 public class ExecutorService implements Disposable {
 
 	private static final Logger logger = Logger.getLogger(ExecutorService.class.getName());
-	static {
-		logger.setLevel(Level.ALL); // TODO: Remove for production
-	}
 
 	/**
 	 * The number of threads per processor for per-processor executor.
@@ -177,9 +174,17 @@ public class ExecutorService implements Disposable {
 				Thread.NORM_PRIORITY
 			) {
 				@Override
-				public Thread newThread(Runnable target) {
-					currentThreadPerProcessorIndex.set(indexObj);
-					return super.newThread(target);
+				public Thread newThread(final Runnable target) {
+					return super.newThread(
+						new Runnable() {
+							@Override
+							public void run() {
+								assert currentThreadPerProcessorIndex.get() == null;
+								currentThreadPerProcessorIndex.set(indexObj);
+								target.run();
+							}
+						}
+					);
 				}
 			};
 			perProcessorThreadFactories.set(index, perProcessorThreadFactory);
