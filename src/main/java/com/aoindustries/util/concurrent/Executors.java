@@ -77,6 +77,11 @@ public class Executors implements Disposable {
 	private static final long DISPOSE_WAIT_NANOS = 100L * 1000L * 1000L; // Was one minute: 60L * 1000L * 1000L * 1000L;
 
 	/**
+	 * The number of threads per processor for per-processor executor.
+	 */
+	private static final int THREADS_PER_PROCESSOR = 2;
+
+	/**
 	 * Lock used for static fields access.
 	 */
 	private static final Object privateLock = new Object();
@@ -164,12 +169,26 @@ public class Executors implements Disposable {
 	 * @see  #dispose()
 	 */
 	public Executors() {
+		preferredConcurrency = RuntimeUtils.getAvailableProcessors() * THREADS_PER_PROCESSOR;
 		synchronized(privateLock) {
 			if(activeCount < 0) throw new AssertionError();
 			if(activeCount == Integer.MAX_VALUE) throw new IllegalStateException();
 			activeCount++;
 			if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "activeCount={0}", activeCount);
 		}
+	}
+	// </editor-fold>
+
+	// <editor-fold defaultstate="collapsed" desc="Preferred Concurrency">
+	private final int preferredConcurrency;
+
+	/**
+	 * Gets the preferred concurrency for this executor.  Does not change for the life
+	 * of the executor, but will be updated should the last executor be disposed
+	 * and another created.
+	 */
+	public int getPreferredConcurrency() {
+		return preferredConcurrency;
 	}
 	// </editor-fold>
 
@@ -880,11 +899,6 @@ public class Executors implements Disposable {
 	private static class PerProcessorExecutor extends ExecutorImpl {
 
 		/**
-		 * The number of threads per processor for per-processor executor.
-		 */
-		private static final int THREADS_PER_PROCESSOR = 2;
-
-		/**
 		 * <p>
 		 * {@code null} when a thread is not from this ExecutorService or is not yet per-processor pool bound.
 		 * </p>
@@ -1023,7 +1037,7 @@ public class Executors implements Disposable {
 			ExecutorService perProcessorExecutorService = index < perProcessorExecutorServices.size() ? perProcessorExecutorServices.get(index) : null;
 			if(perProcessorExecutorService == null) {
 				PrefixThreadFactory perProcessorThreadFactory = getThreadFactory(index);
-				int numThreads = RuntimeUtils.getAvailableProcessors() * THREADS_PER_PROCESSOR;
+				int numThreads = executors.preferredConcurrency;
 				if(logger.isLoggable(Level.FINEST)) {
 					logger.log(
 						Level.FINEST,
@@ -1089,6 +1103,8 @@ public class Executors implements Disposable {
 	 * Where maxPerProcessorDepth is a function of the number of times a per-processor task adds
 	 * a per-processor task of its own.
 	 * </p>
+	 *
+	 * @see  #getPreferredConcurrency()  to determine how many threads may be allocated per executor.
 	 */
 	public Executor getPerProcessor() {
 		return perProcessor;
