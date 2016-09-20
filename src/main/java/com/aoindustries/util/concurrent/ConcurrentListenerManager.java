@@ -164,7 +164,7 @@ public class ConcurrentListenerManager<L> implements Closeable {
 	 */
 	private final Map<L,Queue<EventCall<L>>> listeners = new IdentityHashMap<L,Queue<EventCall<L>>>();
 
-	private final ExecutorService executor = ExecutorService.newInstance();
+	private final Executors executor = new Executors();
 
 	public ConcurrentListenerManager() {
 	}
@@ -248,7 +248,7 @@ public class ConcurrentListenerManager<L> implements Closeable {
 					if(isFirst) {
 						// When the queue is first created, we submit the queue runner to the executor for queue processing
 						// There is only one executor per queue, and on queue per listener
-						executor.submitUnbounded(
+						executor.getUnbounded().submit(
 							new Runnable() {
 								@Override
 								public void run() {
