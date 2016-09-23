@@ -24,6 +24,7 @@ package com.aoindustries.util.concurrent;
 
 import com.aoindustries.lang.Disposable;
 import com.aoindustries.lang.DisposedException;
+import com.aoindustries.lang.NotImplementedException;
 import com.aoindustries.lang.RuntimeUtils;
 import com.aoindustries.util.AtomicSequence;
 import com.aoindustries.util.AutoGrowArrayList;
@@ -93,7 +94,7 @@ public class Executors implements Disposable {
 	 * it's factory.
 	 * This threadLocal is not passed from thread to sub tasks.
 	 */
-	private static final ThreadLocal<PrefixThreadFactory> currentThreadFactory = new ThreadLocal<PrefixThreadFactory>();
+	private static final ThreadLocal<ThreadFactory> currentThreadFactory = new ThreadLocal<ThreadFactory>();
 
 	/*
 	 * The thread factories are created once so each thread gets a unique
@@ -218,7 +219,7 @@ public class Executors implements Disposable {
 		 * Gets the thread factory that is associated with the executor service this
 		 * future will be executed on.
 		 */
-		PrefixThreadFactory getThreadFactory();
+		ThreadFactory getThreadFactory();
 	}
 
 	/**
@@ -230,18 +231,18 @@ public class Executors implements Disposable {
 
 	private static class IncompleteFuture<V> implements ThreadFactoryFuture<V> {
 
-		private final PrefixThreadFactory threadFactory;
+		private final ThreadFactory threadFactory;
 		private final Long incompleteFutureId;
 		private final Future<V> future;
 
-		private IncompleteFuture(PrefixThreadFactory threadFactory, Long incompleteFutureId, Future<V> future) {
+		private IncompleteFuture(ThreadFactory threadFactory, Long incompleteFutureId, Future<V> future) {
 			this.threadFactory = threadFactory;
 			this.incompleteFutureId = incompleteFutureId;
 			this.future = future;
 		}
 
 		@Override
-		public PrefixThreadFactory getThreadFactory() {
+		public ThreadFactory getThreadFactory() {
 			return threadFactory;
 		}
 
@@ -280,18 +281,42 @@ public class Executors implements Disposable {
 		}
 	}
 
+	private static interface SimpleExecutorService {
+
+		<T> Future<T> submit(Callable<T> task);
+
+		<T> Future<T> submit(Runnable task, T result);
+	}
+
+	private static class ExecutorServiceWrapper implements SimpleExecutorService {
+		private final ExecutorService executorService;
+		ExecutorServiceWrapper(ExecutorService executorService) {
+			this.executorService = executorService;
+		}
+
+		@Override
+		public <T> Future<T> submit(Callable<T> task) {
+			return executorService.submit(task);
+		}
+
+		@Override
+		public <T> Future<T> submit(Runnable task, T result) {
+			return executorService.submit(task, result);
+		}
+	}
+
 	private static abstract class IncompleteTimerTask<V> extends TimerTask implements ThreadFactoryFuture<V> {
 
-		protected final PrefixThreadFactory threadFactory;
-		protected final ExecutorService executorService;
+		protected final ThreadFactory threadFactory;
+		protected final SimpleExecutorService executorService;
 		protected final Long incompleteFutureId;
 		private final Object incompleteLock = new Object();
 		private boolean canceled = false;
 		private IncompleteFuture<V> future; // Only available once submitted
 
 		private IncompleteTimerTask(
-			PrefixThreadFactory threadFactory,
-			ExecutorService executorService,
+			ThreadFactory threadFactory,
+			SimpleExecutorService executorService,
 			Long incompleteFutureId
 		) {
 			this.threadFactory = threadFactory;
@@ -300,7 +325,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public PrefixThreadFactory getThreadFactory() {
+		public ThreadFactory getThreadFactory() {
 			return threadFactory;
 		}
 
@@ -403,7 +428,10 @@ public class Executors implements Disposable {
 				f = future;
 			}
 			// Wait until completed
-			return f.get(waitUntil - System.nanoTime(), TimeUnit.NANOSECONDS);
+			return f.get(
+				Math.max(0, waitUntil - System.nanoTime()),
+				TimeUnit.NANOSECONDS
+			);
 		}
 	}
 
@@ -413,8 +441,8 @@ public class Executors implements Disposable {
 	 * Must be holding privateLock.
 	 */
 	private static <T> IncompleteFuture<T> incompleteFutureSubmit(
-		PrefixThreadFactory threadFactory,
-		ExecutorService executorService,
+		ThreadFactory threadFactory,
+		SimpleExecutorService executorService,
 		final Callable<T> task
 	) {
 		assert Thread.holdsLock(privateLock);
@@ -446,14 +474,15 @@ public class Executors implements Disposable {
 	 *
 	 * Must be holding privateLock.
 	 */
-	private static IncompleteFuture<Object> incompleteFutureSubmit(
-		PrefixThreadFactory threadFactory,
-		ExecutorService executorService,
-		final Runnable task
+	private static <T> IncompleteFuture<T> incompleteFutureSubmit(
+		ThreadFactory threadFactory,
+		SimpleExecutorService executorService,
+		final Runnable task,
+		T result
 	) {
 		assert Thread.holdsLock(privateLock);
 		final Long incompleteFutureId = nextIncompleteFutureId++;
-		final Future<Object> submitted = executorService.submit(
+		final Future<T> submitted = executorService.submit(
 			new Runnable() {
 				/**
 				 * Remove from incomplete when run finished.
@@ -469,9 +498,9 @@ public class Executors implements Disposable {
 					}
 				}
 			},
-			(Object)null
+			result
 		);
-		IncompleteFuture<Object> future = new IncompleteFuture<Object>(threadFactory, incompleteFutureId, submitted);
+		IncompleteFuture<T> future = new IncompleteFuture<T>(threadFactory, incompleteFutureId, submitted);
 		incompleteFutures.put(incompleteFutureId, future);
 		return future;
 	}
@@ -481,8 +510,8 @@ public class Executors implements Disposable {
 		final Callable<V> task;
 
 		IncompleteCallableTimerTask(
-			PrefixThreadFactory threadFactory,
-			ExecutorService executorService,
+			ThreadFactory threadFactory,
+			SimpleExecutorService executorService,
 			Long incompleteFutureId,
 			Callable<V> task
 		) {
@@ -505,18 +534,21 @@ public class Executors implements Disposable {
 		}
 	}
 
-	private static class IncompleteRunnableTimerTask extends IncompleteTimerTask<Object> {
+	private static class IncompleteRunnableTimerTask<T> extends IncompleteTimerTask<T> {
 
 		final Runnable task;
+		final T result;
 
 		IncompleteRunnableTimerTask(
-			PrefixThreadFactory threadFactory,
-			ExecutorService executorService,
+			ThreadFactory threadFactory,
+			SimpleExecutorService executorService,
 			Long incompleteFutureId,
-			Runnable task
+			Runnable task,
+			T result
 		) {
 			super(threadFactory, executorService, incompleteFutureId);
 			this.task = task;
+			this.result = result;
 		}
 
 		/**
@@ -526,7 +558,7 @@ public class Executors implements Disposable {
 		public void run() {
 			synchronized(privateLock) {
 				try {
-					setFuture(incompleteFutureSubmit(threadFactory, executorService, task));
+					setFuture(incompleteFutureSubmit(threadFactory, executorService, task, result));
 				} finally {
 					incompleteFutures.remove(incompleteFutureId);
 				}
@@ -540,8 +572,8 @@ public class Executors implements Disposable {
 	 * Must be holding privateLock.
 	 */
 	private static <T> Future<T> incompleteFutureSubmit(
-		PrefixThreadFactory threadFactory,
-		ExecutorService executorService,
+		ThreadFactory threadFactory,
+		SimpleExecutorService executorService,
 		Callable<T> task,
 		long delay
 	) {
@@ -558,15 +590,16 @@ public class Executors implements Disposable {
 	 *
 	 * Must be holding privateLock.
 	 */
-	private static Future<?> incompleteFutureSubmit(
-		PrefixThreadFactory threadFactory,
-		ExecutorService executorService,
+	private static <T> Future<T> incompleteFutureSubmit(
+		ThreadFactory threadFactory,
+		SimpleExecutorService executorService,
 		Runnable task,
+		T result,
 		long delay
 	) {
 		assert Thread.holdsLock(privateLock);
 		final Long incompleteFutureId = nextIncompleteFutureId++;
-		IncompleteRunnableTimerTask timerTask = new IncompleteRunnableTimerTask(threadFactory, executorService, incompleteFutureId, task);
+		IncompleteRunnableTimerTask<T> timerTask = new IncompleteRunnableTimerTask<T>(threadFactory, executorService, incompleteFutureId, task, result);
 		getTimer().schedule(timerTask, delay);
 		incompleteFutures.put(incompleteFutureId, timerTask);
 		return timerTask;
@@ -614,7 +647,7 @@ public class Executors implements Disposable {
 		 * Gets the thread factory that will be used for the executor.
 		 * Caller must be holding privateLock.
 		 */
-		abstract PrefixThreadFactory getThreadFactory();
+		abstract ThreadFactory getThreadFactory();
 
 		/**
 		 * Gets the executor service.
@@ -622,7 +655,7 @@ public class Executors implements Disposable {
 		 *
 		 * @see  #getThreadFactory()  The executor must be using the same thread factory
 		 */
-		protected abstract ExecutorService getExecutorService();
+		protected abstract SimpleExecutorService getExecutorService();
 
 		/**
 		 * @see  ExecutorService#wrap(java.util.concurrent.Callable)
@@ -661,8 +694,12 @@ public class Executors implements Disposable {
 			} else if(size == 1) {
 				try {
 					return Collections.singletonList(tasks.iterator().next().call());
-				} catch(Exception e) {
-					throw new ExecutionException(e);
+				} catch(ThreadDeath td) {
+					throw td;
+				} catch(InterruptedException e) {
+					throw e;
+				} catch(Throwable t) {
+					throw new ExecutionException(t);
 				}
 			} else {
 				List<Callable<T>> taskList;
@@ -683,8 +720,12 @@ public class Executors implements Disposable {
 						// Last one on current thread
 						try {
 							results.add(task.call());
-						} catch(Exception e) {
-							throw new ExecutionException(e);
+						} catch(ThreadDeath td) {
+							throw td;
+						} catch(InterruptedException e) {
+							throw e;
+						} catch(Throwable t) {
+							throw new ExecutionException(t);
 						}
 					}
 				}
@@ -710,15 +751,21 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public Future<?> submit(Runnable task) throws DisposedException {
+		public <T> Future<T> submit(Runnable task, T result) throws DisposedException {
 			synchronized(privateLock) {
 				if(executors.disposed) throw new DisposedException();
 				return incompleteFutureSubmit(
 					getThreadFactory(),
 					getExecutorService(),
-					wrap(task)
+					wrap(task),
+					result
 				);
 			}
+		}
+
+		@Override
+		public Future<?> submit(Runnable task) throws DisposedException {
+			return submit(task, null);
 		}
 
 		@Override
@@ -732,8 +779,10 @@ public class Executors implements Disposable {
 			} else if(size == 1) {
 				try {
 					tasks.iterator().next().run();
-				} catch(Exception e) {
-					throw new ExecutionException(e);
+				} catch(ThreadDeath td) {
+					throw td;
+				} catch(Throwable t) {
+					throw new ExecutionException(t);
 				}
 			} else {
 				List<Runnable> taskList;
@@ -752,8 +801,10 @@ public class Executors implements Disposable {
 						// Last one on current thread
 						try {
 							task.run();
-						} catch(Exception e) {
-							throw new ExecutionException(e);
+						} catch(ThreadDeath td) {
+							throw td;
+						} catch(Throwable t) {
+							throw new ExecutionException(t);
 						}
 					}
 				}
@@ -765,16 +816,22 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public Future<?> submit(Runnable task, long delay) throws DisposedException {
+		public <T> Future<T> submit(Runnable task, T result, long delay) throws DisposedException {
 			synchronized(privateLock) {
 				if(executors.disposed) throw new DisposedException();
 				return incompleteFutureSubmit(
 					getThreadFactory(),
 					getExecutorService(),
 					wrap(task),
+					result,
 					delay
 				);
 			}
+		}
+
+		@Override
+		public Future<?> submit(Runnable task, long delay) throws DisposedException {
+			return submit(task, null, delay);
 		}
 	}
 	// </editor-fold>
@@ -784,8 +841,10 @@ public class Executors implements Disposable {
 		private static ExecutorService unboundedExecutorService;
 		private static Thread unboundedShutdownHook;
 
-		private static final PrefixThreadFactory unboundedThreadFactory = new PrefixThreadFactory(
-			Executors.class.getName()+".unbounded-thread-",
+		private static final String THREAD_FACTORY_NAME_PREFIX = Executors.class.getName()+".unbounded-thread-";
+
+		private static final ThreadFactory unboundedThreadFactory = new PrefixThreadFactory(
+			THREAD_FACTORY_NAME_PREFIX,
 			Thread.NORM_PRIORITY
 		);
 
@@ -838,20 +897,20 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		PrefixThreadFactory getThreadFactory() {
+		ThreadFactory getThreadFactory() {
 			assert Thread.holdsLock(privateLock);
 			return unboundedThreadFactory;
 		}
 
 		@Override
-		protected ExecutorService getExecutorService() {
+		protected SimpleExecutorService getExecutorService() {
 			assert Thread.holdsLock(privateLock);
 			if(activeCount < 1) throw new IllegalStateException();
 			if(unboundedExecutorService == null) {
 				ExecutorService newExecutorService = java.util.concurrent.Executors.newCachedThreadPool(unboundedThreadFactory);
 				Thread newShutdownHook = new ExecutorServiceShutdownHook(
 					newExecutorService,
-					unboundedThreadFactory.namePrefix + "shutdownHook"
+					THREAD_FACTORY_NAME_PREFIX + "shutdownHook"
 				);
 				// Only keep instances once shutdown hook properly registered
 				try {
@@ -863,7 +922,7 @@ public class Executors implements Disposable {
 				unboundedExecutorService = newExecutorService;
 				unboundedShutdownHook = newShutdownHook;
 			}
-			return unboundedExecutorService;
+			return new ExecutorServiceWrapper(unboundedExecutorService);
 		}
 
 		/**
@@ -917,11 +976,11 @@ public class Executors implements Disposable {
 		private static final AutoGrowArrayList<ExecutorService> perProcessorExecutorServices = new AutoGrowArrayList<ExecutorService>();
 		private static final AutoGrowArrayList<Thread> perProcessorShutdownHooks = new AutoGrowArrayList<Thread>();
 
-		private static final List<PrefixThreadFactory> threadFactories = new AutoGrowArrayList<PrefixThreadFactory>();
+		private static final List<ThreadFactory> threadFactories = new AutoGrowArrayList<ThreadFactory>();
 
-		private static PrefixThreadFactory getThreadFactory(int index) {
+		private static ThreadFactory getThreadFactory(int index) {
 			assert Thread.holdsLock(privateLock);
-			PrefixThreadFactory perProcessorThreadFactory;
+			ThreadFactory perProcessorThreadFactory;
 			if(index < threadFactories.size()) {
 				perProcessorThreadFactory = threadFactories.get(index);
 			} else {
@@ -990,7 +1049,7 @@ public class Executors implements Disposable {
 					perProcessorExecutorServices.set(index, null);
 					perProcessorShutdownHooks.set(index, null);
 					// Never wait for own thread (causes stall every time)
-					PrefixThreadFactory tf = currentThreadFactory.get();
+					ThreadFactory tf = currentThreadFactory.get();
 					if(tf != null && tf == threadFactories.get(index)) {
 						new Thread(ppesShutdown).start();
 					} else {
@@ -1011,7 +1070,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		PrefixThreadFactory getThreadFactory() {
+		ThreadFactory getThreadFactory() {
 			assert Thread.holdsLock(privateLock);
 			int index;
 			{
@@ -1024,7 +1083,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		protected ExecutorService getExecutorService() {
+		protected SimpleExecutorService getExecutorService() {
 			assert Thread.holdsLock(privateLock);
 			if(activeCount < 1) throw new IllegalStateException();
 			int index;
@@ -1036,7 +1095,7 @@ public class Executors implements Disposable {
 			}
 			ExecutorService perProcessorExecutorService = index < perProcessorExecutorServices.size() ? perProcessorExecutorServices.get(index) : null;
 			if(perProcessorExecutorService == null) {
-				PrefixThreadFactory perProcessorThreadFactory = getThreadFactory(index);
+				ThreadFactory perProcessorThreadFactory = getThreadFactory(index);
 				int numThreads = executors.preferredConcurrency;
 				if(logger.isLoggable(Level.FINEST)) {
 					logger.log(
@@ -1077,7 +1136,7 @@ public class Executors implements Disposable {
 				if(perProcessorExecutorServices.set(index, perProcessorExecutorService) != null) throw new AssertionError();
 				if(perProcessorShutdownHooks.set(index, shutdownHook) != null) throw new AssertionError();
 			}
-			return perProcessorExecutorService;
+			return new ExecutorServiceWrapper(perProcessorExecutorService);
 		}
 	};
 
@@ -1108,6 +1167,210 @@ public class Executors implements Disposable {
 	 */
 	public Executor getPerProcessor() {
 		return perProcessor;
+	}
+	// </editor-fold>
+
+	// <editor-fold defaultstate="collapsed" desc="Sequential">
+	private static class SequentialExecutor extends ExecutorImpl {
+
+		private static class SequentialFuture<V> implements Future<V> {
+
+			private final Object lock = new Object();
+			private final Callable<V> task;
+			private boolean canceled;
+			private boolean done;
+			private Thread gettingThread;
+			private V result;
+			private Throwable exception;
+
+			private SequentialFuture(Callable<V> task) {
+				this.task = task;
+			}
+
+			@Override
+			public boolean cancel(boolean mayInterruptIfRunning) {
+				synchronized(lock) {
+					if(canceled) return false;
+					if(done) return false;
+					canceled = true;
+					done = true;
+					if(mayInterruptIfRunning && gettingThread != null) {
+						gettingThread.interrupt();
+					}
+					lock.notify();
+					return true;
+				}
+			}
+
+			@Override
+			public boolean isCancelled() {
+				synchronized(lock) {
+					return canceled;
+				}
+			}
+
+			@Override
+			public boolean isDone() {
+				synchronized(lock) {
+					return done;
+				}
+			}
+
+			@Override
+			public V get() throws InterruptedException, ExecutionException {
+				synchronized(lock) {
+					while(true) {
+						if(canceled) {
+							lock.notify();
+							throw new CancellationException();
+						}
+						if(done) {
+							lock.notify();
+							if(exception != null) throw new ExecutionException(exception);
+							else return result;
+						}
+						if(gettingThread == null) {
+							gettingThread = Thread.currentThread();
+							break;
+						} else {
+							lock.wait();
+						}
+					}
+				}
+				try {
+					V r = task.call();
+					synchronized(lock) {
+						gettingThread = null;
+						done = true;
+						result = r;
+						lock.notify();
+					}
+					return r;
+				} catch(ThreadDeath td) {
+					throw td;
+				} catch(Throwable t) {
+					synchronized(lock) {
+						gettingThread = null;
+						done = true;
+						exception = t;
+						lock.notify();
+					}
+					throw new ExecutionException(t);
+				}
+			}
+
+			@Override
+			public V get(long timeout, TimeUnit unit) {
+				throw new NotImplementedException();
+			}
+		}
+
+		private SequentialExecutor(Executors executors) {
+			super(executors);
+		}
+
+		/**
+		 * Runs the command immediately on the caller thread.
+		 */
+		@Override
+		public void execute(Runnable command) {
+			command.run();
+		}
+
+		private static final ThreadFactory sequentialThreadFactory = new ThreadFactory() {
+			@Override
+			public Thread newThread(Runnable r) {
+				throw new IllegalStateException("No threads should be created by the sequential executor");
+			}
+		};
+
+		@Override
+		ThreadFactory getThreadFactory() {
+			assert Thread.holdsLock(privateLock);
+			return sequentialThreadFactory;
+		}
+
+		private static final SimpleExecutorService sequentialExecutorService = new SimpleExecutorService() {
+
+			@Override
+			public <T> Future<T> submit(Callable<T> task) {
+				return new SequentialFuture<T>(task);
+			}
+
+			@Override
+			public <T> Future<T> submit(final Runnable task, final T result) {
+				return submit(
+					new Callable<T>() {
+						@Override
+						public T call() {
+							task.run();
+							return result;
+						}
+					}
+				);
+			}
+		};
+
+		@Override
+		protected SimpleExecutorService getExecutorService() {
+			assert Thread.holdsLock(privateLock);
+			if(activeCount < 1) throw new IllegalStateException();
+			return sequentialExecutorService;
+		}
+
+		@Override
+		public <T> List<T> callAll(Collection<Callable<T>> tasks) throws InterruptedException, ExecutionException {
+			int size = tasks.size();
+			if(size == 0) {
+				return Collections.emptyList();
+			} else {
+				try {
+					if(size == 1) {
+						return Collections.singletonList(
+							tasks.iterator().next().call()
+						);
+					} else {
+						List<T> results = new ArrayList<T>(size);
+						for(Callable<T> task : tasks) {
+							results.add(task.call());
+						}
+						return Collections.unmodifiableList(results);
+					}
+				} catch(ThreadDeath td) {
+					throw td;
+				} catch(InterruptedException e) {
+					throw e;
+				} catch(Throwable t) {
+					throw new ExecutionException(t);
+				}
+			}
+		}
+
+		@Override
+		public void runAll(Collection<Runnable> tasks) throws ExecutionException {
+			try {
+				for(Runnable task : tasks) task.run();
+			} catch(ThreadDeath td) {
+				throw td;
+			} catch(Throwable t) {
+				throw new ExecutionException(t);
+			}
+		}
+	};
+
+	private final SequentialExecutor sequential = new SequentialExecutor(this);
+
+	/**
+	 * <p>
+	 * A sequential implementation of executor that performs no concurrent processing.
+	 * All tasks are performed on the thread calling {@link Future#get().
+	 * </p>
+	 * <p>
+	 * Note: Timeout not implemented
+	 * </p>
+	 */
+	public Executor getSequential() {
+		return sequential;
 	}
 	// </editor-fold>
 
@@ -1162,7 +1425,7 @@ public class Executors implements Disposable {
 			}
 		}
 		if(waitFutures != null) {
-			PrefixThreadFactory tf = currentThreadFactory.get();
+			ThreadFactory tf = currentThreadFactory.get();
 			final long waitUntil = System.nanoTime() + DISPOSE_WAIT_NANOS;
 			// Wait for our incomplete tasks to complete.
 			// This is done while not holding privateLock to avoid deadlock.

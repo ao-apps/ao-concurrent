@@ -75,6 +75,16 @@ public interface Executor extends java.util.concurrent.Executor {
 	<T> Future<T> submit(Callable<T> task, long delay) throws DisposedException;
 
 	/**
+	 * Submits to the executor,
+	 * returning the provided value on success.
+	 *
+	 * @see  Executors#wrap(java.lang.Runnable)
+	 *
+	 * @exception  DisposedException  if already disposed.
+	 */
+	<T> Future<T> submit(Runnable task, T result) throws DisposedException;
+
+	/**
 	 * Submits to the executor.
 	 *
 	 * @see  Executors#wrap(java.lang.Runnable)
@@ -96,6 +106,16 @@ public interface Executor extends java.util.concurrent.Executor {
 	 */
 	// Java 1.8: default interface method
 	void runAll(Collection<Runnable> tasks) throws DisposedException, InterruptedException, ExecutionException;
+
+	/**
+	 * Submits to the executor after the provided delay,
+	 * returning the provided value on success.
+	 * 
+	 * @see  Executors#wrap(java.lang.Runnable)
+	 *
+	 * @exception  DisposedException  if already disposed.
+	 */
+	<T> Future<T> submit(Runnable task, T result, long delay) throws DisposedException;
 
 	/**
 	 * Submits to the executor after the provided delay.
