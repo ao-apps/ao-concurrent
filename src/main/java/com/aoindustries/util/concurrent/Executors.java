@@ -85,7 +85,8 @@ public class Executors implements Disposable {
 	/**
 	 * Lock used for static fields access.
 	 */
-	private static final Object privateLock = new Object();
+	private static class PrivateLock {}
+	private static final PrivateLock privateLock = new PrivateLock();
 
 	// <editor-fold defaultstate="collapsed" desc="Thread Factories">
 	/**
@@ -170,7 +171,8 @@ public class Executors implements Disposable {
 	 * @see  #dispose()
 	 */
 	public Executors() {
-		preferredConcurrency = RuntimeUtils.getAvailableProcessors() * THREADS_PER_PROCESSOR;
+		int availableProcessors = RuntimeUtils.getAvailableProcessors();
+		preferredConcurrency = availableProcessors==1 ? 1 : (availableProcessors * THREADS_PER_PROCESSOR);
 		synchronized(privateLock) {
 			if(activeCount < 0) throw new AssertionError();
 			if(activeCount == Integer.MAX_VALUE) throw new IllegalStateException();
@@ -184,9 +186,14 @@ public class Executors implements Disposable {
 	private final int preferredConcurrency;
 
 	/**
+	 * <p>
 	 * Gets the preferred concurrency for this executor.  Does not change for the life
 	 * of the executor, but will be updated should the last executor be disposed
 	 * and another created.
+	 * </p>
+	 * <p>
+	 * This will always be {@code 1} on a single-CPU system, not a multiple of CPU count.
+	 * </p>
 	 */
 	public int getPreferredConcurrency() {
 		return preferredConcurrency;
@@ -310,7 +317,8 @@ public class Executors implements Disposable {
 		protected final ThreadFactory threadFactory;
 		protected final SimpleExecutorService executorService;
 		protected final Long incompleteFutureId;
-		private final Object incompleteLock = new Object();
+		private static class IncompleteLock {}
+		private final IncompleteLock incompleteLock = new IncompleteLock();
 		private boolean canceled = false;
 		private IncompleteFuture<V> future; // Only available once submitted
 
@@ -1162,6 +1170,7 @@ public class Executors implements Disposable {
 	 * Where maxPerProcessorDepth is a function of the number of times a per-processor task adds
 	 * a per-processor task of its own.
 	 * </p>
+	 * TODO: Use sequential executor for single-CPU systems?
 	 *
 	 * @see  #getPreferredConcurrency()  to determine how many threads may be allocated per executor.
 	 */
@@ -1175,7 +1184,8 @@ public class Executors implements Disposable {
 
 		private static class SequentialFuture<V> implements Future<V> {
 
-			private final Object lock = new Object();
+			private static class Lock {}
+			private final Lock lock = new Lock();
 			private final Callable<V> task;
 			private boolean canceled;
 			private boolean done;
@@ -1261,6 +1271,7 @@ public class Executors implements Disposable {
 
 			@Override
 			public V get(long timeout, TimeUnit unit) {
+				// TODO: Throw wait onto unbounded executor?
 				throw new NotImplementedException();
 			}
 		}
