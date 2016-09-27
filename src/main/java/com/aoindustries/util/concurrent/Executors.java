@@ -24,7 +24,6 @@ package com.aoindustries.util.concurrent;
 
 import com.aoindustries.lang.Disposable;
 import com.aoindustries.lang.DisposedException;
-import com.aoindustries.lang.NotImplementedException;
 import com.aoindustries.lang.RuntimeUtils;
 import com.aoindustries.util.i18n.I18nThreadLocalCallable;
 import com.aoindustries.util.i18n.I18nThreadLocalRunnable;
@@ -178,6 +177,8 @@ public class Executors implements Disposable {
 			throw new IllegalStateException("activeCount integer wraparound detected");
 		}
 		if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "activeCount={0}", newActiveCount);
+		// Use sequential executor on single-CPU systems
+		perProcessor = preferredConcurrency==1 ? null : new PerProcessorExecutor(this);
 	}
 	// </editor-fold>
 
@@ -476,9 +477,13 @@ public class Executors implements Disposable {
 				f = future;
 			}
 			// Wait until completed
-			long nanosRemaining = waitUntil - System.nanoTime();
-			if(nanosRemaining <= 0) throw new TimeoutException();
-			return f.get(nanosRemaining, TimeUnit.NANOSECONDS);
+			return f.get(
+				Math.max(
+					0,
+					waitUntil - System.nanoTime()
+				),
+				TimeUnit.NANOSECONDS
+			);
 		}
 	}
 
@@ -1120,14 +1125,20 @@ public class Executors implements Disposable {
 		}
 	};
 
-	private final PerProcessorExecutor perProcessor = new PerProcessorExecutor(this);
+	private final PerProcessorExecutor perProcessor;
 
 	/**
 	 * <p>
-	 * An executor service that will execute at most two tasks per processor.
+	 * An executor service that will execute at most two tasks per processor on
+	 * multi-CPU systems.  On single-CPU systems returns the sequential executor
+	 * (see {@link #getSequential()}).
+	 * </p>
+	 * <p>
 	 * This should be used for CPU-bound tasks that generally operate non-blocking.
 	 * If a thread blocks or deadlocks, it can starve the system entirely - use this
-	 * cautiously.
+	 * cautiously.  For example, do not use it for things like disk I/O or network
+	 * I/O (including writes - they can block, too, once the network buffers are
+	 * full). 
 	 * </p>
 	 * <p>
 	 * If a task is submitted by a thread that is already part of a per-processor executor,
@@ -1142,12 +1153,13 @@ public class Executors implements Disposable {
 	 * Where maxPerProcessorDepth is a function of the number of times a per-processor task adds
 	 * a per-processor task of its own.
 	 * </p>
-	 * TODO: Use sequential executor for single-CPU systems?
 	 *
 	 * @see  #getPreferredConcurrency()  to determine how many threads may be allocated per executor.
+	 * @see  #getSequential()  the executor that will be used in single-CPU systems
 	 */
 	public Executor getPerProcessor() {
-		return perProcessor;
+		// Use sequential executor on single-CPU systems
+		return preferredConcurrency==1 ? sequential : perProcessor;
 	}
 	// </editor-fold>
 
@@ -1159,14 +1171,22 @@ public class Executors implements Disposable {
 			private static class Lock {}
 			private final Lock lock = new Lock();
 			private final Callable<V> task;
+			private final UnboundedExecutor unboundedExecutor;
 			private boolean canceled;
 			private boolean done;
 			private Thread gettingThread;
 			private V result;
 			private Throwable exception;
 
-			private SequentialFuture(Callable<V> task) {
+			/**
+			 * @param unboundedExecutor  Only used for get timeout implementation.
+			 */
+			private SequentialFuture(
+				Callable<V> task,
+				UnboundedExecutor unboundedExecutor
+			) {
 				this.task = task;
+				this.unboundedExecutor = unboundedExecutor;
 			}
 
 			@Override
@@ -1199,7 +1219,7 @@ public class Executors implements Disposable {
 			}
 
 			@Override
-			public V get() throws InterruptedException, ExecutionException {
+			public V get() throws InterruptedException, CancellationException, ExecutionException {
 				synchronized(lock) {
 					while(true) {
 						if(canceled) throw new CancellationException();
@@ -1237,10 +1257,37 @@ public class Executors implements Disposable {
 				}
 			}
 
+			/**
+			 * @see  #getUnbounded()  Delegates to unboundedExecutor to provide timeout functionality.
+			 */
 			@Override
-			public V get(long timeout, TimeUnit unit) {
-				// TODO: Throw wait onto unbounded executor?
-				throw new NotImplementedException();
+			public V get(long timeout, TimeUnit unit) throws InterruptedException, CancellationException, ExecutionException, TimeoutException {
+				synchronized(lock) {
+					if(canceled) throw new CancellationException();
+					if(done) {
+						if(exception != null) throw new ExecutionException(exception);
+						else return result;
+					}
+				}
+				try {
+					return unboundedExecutor.submit(new Callable<V>() {
+						@Override
+						public V call() throws Exception {
+							return SequentialFuture.this.get();
+						}
+					}).get(
+						timeout,
+						unit
+					);
+				} catch(ExecutionException e) {
+					// Unwrap exception to hide the fact this is delegating to another executor
+					// For example, calling code might assume they will not get back ExecutionException with cause of ExecutionException.
+					Throwable cause = e.getCause();
+					if(cause instanceof InterruptedException) throw (InterruptedException)cause;
+					if(cause instanceof CancellationException) throw (CancellationException)cause;
+					if(cause instanceof ExecutionException) throw (ExecutionException)cause;
+					throw e;
+				}
 			}
 		}
 
@@ -1268,11 +1315,11 @@ public class Executors implements Disposable {
 			return sequentialThreadFactory;
 		}
 
-		private static final SimpleExecutorService sequentialExecutorService = new SimpleExecutorService() {
+		private final SimpleExecutorService sequentialExecutorService = new SimpleExecutorService() {
 
 			@Override
 			public <T> Future<T> submit(Callable<T> task) {
-				return new SequentialFuture<T>(task);
+				return new SequentialFuture<T>(task, executors.unbounded);
 			}
 
 			@Override
