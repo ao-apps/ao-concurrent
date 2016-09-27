@@ -1099,12 +1099,14 @@ public class Executors implements Disposable {
 						);
 					} else {
 						// Other levels will shutdown threads after 60 seconds of inactivity
-						executorService = new ThreadPoolExecutor(
-							0, numThreads,
+						ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
+							numThreads, numThreads,
 							60L, TimeUnit.SECONDS,
 							new LinkedBlockingQueue<Runnable>(),
 							perProcessorThreadFactory
 						);
+						threadPool.allowCoreThreadTimeOut(true);
+						executorService = threadPool;
 					}
 					perProcessorExecutorService = new ExecutorServiceWrapper(
 						executorService,
