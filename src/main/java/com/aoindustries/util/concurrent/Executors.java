@@ -883,6 +883,8 @@ public class Executors implements Disposable {
 							}
 						} catch(InterruptedException e) {
 							logger.log(Level.WARNING, null, e);
+							// Restore the interrupted status
+							Thread.currentThread().interrupt();
 						}
 					}
 				};
@@ -1037,6 +1039,8 @@ public class Executors implements Disposable {
 									}
 								} catch(InterruptedException e) {
 									logger.log(Level.WARNING, null, e);
+									// Restore the interrupted status
+									Thread.currentThread().interrupt();
 								}
 							}
 						};
@@ -1468,6 +1472,8 @@ public class Executors implements Disposable {
 								// OK on shutdown
 							} catch(InterruptedException e) {
 								// OK on shutdown
+								// Restore the interrupted status
+								Thread.currentThread().interrupt();
 							} catch(TimeoutException e) {
 								// Cancel after timeout
 								//logger.log(Level.WARNING, null, e);
@@ -1507,6 +1513,8 @@ public class Executors implements Disposable {
 											// OK on shutdown
 										} catch(InterruptedException e) {
 											// OK on shutdown
+											// Restore the interrupted status
+											Thread.currentThread().interrupt();
 										} catch(TimeoutException e) {
 											// Cancel after timeout
 											//logger.log(Level.WARNING, null, e);
