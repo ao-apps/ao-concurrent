@@ -80,6 +80,11 @@ public class Executors implements Disposable {
 
 	/**
 	 * The number of threads per processor for per-processor executor.
+	 * <p>
+	 * Note: Tried this at a value of one and did not benchmark any significant
+	 * difference.  Favoring this as a multiple of CPU cores to be able to bully
+	 * around lock contention or keep busy in the chance of occasional I/O.
+	 * </p>
 	 */
 	private static final int THREADS_PER_PROCESSOR = 2;
 
