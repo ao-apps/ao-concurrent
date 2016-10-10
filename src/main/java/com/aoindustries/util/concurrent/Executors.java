@@ -498,7 +498,7 @@ public class Executors implements Disposable {
 	private static <T> IncompleteFuture<T> incompleteFutureSubmit(
 		ThreadFactory threadFactory,
 		SimpleExecutorService executorService,
-		final Callable<T> task
+		final Callable<? extends T> task
 	) {
 		final Long incompleteFutureId = nextIncompleteFutureId.getAndIncrement();
 		final Future<T> future = executorService.submit(
@@ -554,13 +554,13 @@ public class Executors implements Disposable {
 
 	private static class IncompleteCallableTimerTask<V> extends IncompleteTimerTask<V> {
 
-		final Callable<V> task;
+		final Callable<? extends V> task;
 
 		IncompleteCallableTimerTask(
 			ThreadFactory threadFactory,
 			SimpleExecutorService executorService,
 			Long incompleteFutureId,
-			Callable<V> task
+			Callable<? extends V> task
 		) {
 			super(threadFactory, executorService, incompleteFutureId);
 			this.task = task;
@@ -615,7 +615,7 @@ public class Executors implements Disposable {
 	private static <T> Future<T> incompleteFutureSubmit(
 		ThreadFactory threadFactory,
 		SimpleExecutorService executorService,
-		Callable<T> task,
+		Callable<? extends T> task,
 		long delay
 	) {
 		final Long incompleteFutureId = nextIncompleteFutureId.getAndIncrement();
@@ -707,7 +707,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public <T> Future<T> submit(Callable<T> task) throws DisposedException {
+		public <T> Future<T> submit(Callable<? extends T> task) throws DisposedException {
 			if(executors.disposed.get()) throw new DisposedException();
 			return incompleteFutureSubmit(
 				getThreadFactory(),
@@ -717,7 +717,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public <T> List<T> callAll(Collection<Callable<T>> tasks) throws DisposedException, InterruptedException, ExecutionException {
+		public <T> List<T> callAll(Collection<? extends Callable<? extends T>> tasks) throws DisposedException, InterruptedException, ExecutionException {
 			if(executors.disposed.get()) throw new DisposedException();
 			int size = tasks.size();
 			if(size == 0) {
@@ -733,16 +733,16 @@ public class Executors implements Disposable {
 					throw new ExecutionException(t);
 				}
 			} else {
-				List<Callable<T>> taskList;
+				List<? extends Callable<? extends T>> taskList;
 				if(tasks instanceof List) {
-					taskList = (List<Callable<T>>)tasks;
+					taskList = (List<? extends Callable<? extends T>>)tasks;
 				} else {
-					taskList = new ArrayList<Callable<T>>(tasks);
+					taskList = new ArrayList<Callable<? extends T>>(tasks);
 				}
 				List<Future<T>> futures = new ArrayList<Future<T>>(size - 1); // Last one called by current thread
 				List<T> results = new ArrayList<T>(size);
 				for(int i=0; i<size; i++) {
-					Callable<T> task = taskList.get(i);
+					Callable<? extends T> task = taskList.get(i);
 					if(i < (size - 1)) {
 						// Call concurrently
 						futures.add(submit(task));
@@ -769,7 +769,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public <T> Future<T> submit(Callable<T> task, long delay) throws DisposedException {
+		public <T> Future<T> submit(Callable<? extends T> task, long delay) throws DisposedException {
 			if(executors.disposed.get()) throw new DisposedException();
 			return incompleteFutureSubmit(
 				getThreadFactory(),
@@ -796,7 +796,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public void runAll(Collection<Runnable> tasks) throws DisposedException, InterruptedException, ExecutionException {
+		public void runAll(Collection<? extends Runnable> tasks) throws DisposedException, InterruptedException, ExecutionException {
 			if(executors.disposed.get()) throw new DisposedException();
 			int size = tasks.size();
 			if(size == 0) {
@@ -810,9 +810,9 @@ public class Executors implements Disposable {
 					throw new ExecutionException(t);
 				}
 			} else {
-				List<Runnable> taskList;
+				List<? extends Runnable> taskList;
 				if(tasks instanceof List) {
-					taskList = (List<Runnable>)tasks;
+					taskList = (List<? extends Runnable>)tasks;
 				} else {
 					taskList = new ArrayList<Runnable>(tasks);
 				}
@@ -1352,7 +1352,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public <T> List<T> callAll(Collection<Callable<T>> tasks) throws InterruptedException, ExecutionException {
+		public <T> List<T> callAll(Collection<? extends Callable<? extends T>> tasks) throws InterruptedException, ExecutionException {
 			int size = tasks.size();
 			if(size == 0) {
 				return Collections.emptyList();
@@ -1364,7 +1364,7 @@ public class Executors implements Disposable {
 						);
 					} else {
 						List<T> results = new ArrayList<T>(size);
-						for(Callable<T> task : tasks) {
+						for(Callable<? extends T> task : tasks) {
 							results.add(task.call());
 						}
 						return Collections.unmodifiableList(results);
@@ -1380,7 +1380,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public void runAll(Collection<Runnable> tasks) throws ExecutionException {
+		public void runAll(Collection<? extends Runnable> tasks) throws ExecutionException {
 			try {
 				for(Runnable task : tasks) task.run();
 			} catch(ThreadDeath td) {

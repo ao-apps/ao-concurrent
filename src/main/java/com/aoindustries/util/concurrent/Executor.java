@@ -49,7 +49,7 @@ public interface Executor extends java.util.concurrent.Executor {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	<T> Future<T> submit(Callable<T> task) throws DisposedException;
+	<T> Future<T> submit(Callable<? extends T> task) throws DisposedException;
 
 	/**
 	 * Calls all of the tasks concurrently, waiting for them to all complete.
@@ -63,7 +63,7 @@ public interface Executor extends java.util.concurrent.Executor {
 	 * @exception  DisposedException  if already disposed.
 	 */
 	// Java 1.8: default interface method
-	<T> List<T> callAll(Collection<Callable<T>> tasks) throws DisposedException, InterruptedException, ExecutionException;
+	<T> List<T> callAll(Collection<? extends Callable<? extends T>> tasks) throws DisposedException, InterruptedException, ExecutionException;
 
 	/**
 	 * Submits to the executor after the provided delay.
@@ -72,7 +72,7 @@ public interface Executor extends java.util.concurrent.Executor {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	<T> Future<T> submit(Callable<T> task, long delay) throws DisposedException;
+	<T> Future<T> submit(Callable<? extends T> task, long delay) throws DisposedException;
 
 	/**
 	 * Submits to the executor,
@@ -105,7 +105,7 @@ public interface Executor extends java.util.concurrent.Executor {
 	 * @exception  DisposedException  if already disposed.
 	 */
 	// Java 1.8: default interface method
-	void runAll(Collection<Runnable> tasks) throws DisposedException, InterruptedException, ExecutionException;
+	void runAll(Collection<? extends Runnable> tasks) throws DisposedException, InterruptedException, ExecutionException;
 
 	/**
 	 * Submits to the executor after the provided delay,
