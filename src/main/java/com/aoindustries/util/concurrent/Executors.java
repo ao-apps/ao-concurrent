@@ -1150,7 +1150,7 @@ public class Executors implements Disposable {
 	 * full). 
 	 * </p>
 	 * <p>
-	 * If a task is submitted by a thread that is already part of a per-processor executor,
+	 * When a task is submitted by a thread that is already part of a per-processor executor,
 	 * it will be invoked on a different per-processor executor to avoid potential deadlock.
 	 * This means the total number of threads can exceed two tasks per processor, but it will
 	 * remain bounded as a function of:
