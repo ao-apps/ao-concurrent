@@ -34,7 +34,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 	<packaging>jar</packaging>
 
 	<name>AO Concurrent</name>
-	<url>https://www.aoindustries.com/docs/ao-concurrent/</url>
+	<url>https://www.aoindustries.com/ao-concurrent/</url>
 	<description>Concurrent programming utilities.</description>
 	<inceptionYear>2011</inceptionYear>
 
@@ -215,7 +215,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 							<keywords>true</keywords><!-- Help internal search systems -->
 							<quiet>true</quiet>
 							<links>
-								<link>https://www.aoindustries.com/docs/aocode-public/</link>
+								<link>https://www.aoindustries.com/aocode-public/apidocs/</link>
 							</links>
 						</configuration>
 						<version>2.10.4</version>
