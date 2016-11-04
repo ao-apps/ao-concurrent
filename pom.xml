@@ -37,7 +37,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 	<packaging>jar</packaging>
 
 	<name>AO Concurrent</name>
-	<url>https://www.aoindustries.com${bookPath}/</url><!-- Can't inherit due to multi-module -->
+	<url>https://aoindustries.com${bookPath}/</url><!-- Can't inherit due to multi-module -->
 	<description>Concurrent programming utilities.</description>
 	<inceptionYear>2011</inceptionYear>
 
@@ -59,7 +59,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 						<artifactId>maven-javadoc-plugin</artifactId>
 						<configuration>
 							<links>
-								<link>https://www.aoindustries.com/aocode-public/apidocs/</link>
+								<link>https://aoindustries.com/aocode-public/apidocs/</link>
 							</links>
 						</configuration>
 					</plugin>
