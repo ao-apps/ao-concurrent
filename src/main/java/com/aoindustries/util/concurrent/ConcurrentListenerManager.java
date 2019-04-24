@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2014, 2015  AO Industries, Inc.
+ * Copyright (C) 2014, 2015, 2019  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -22,7 +22,6 @@
  */
 package com.aoindustries.util.concurrent;
 
-import com.aoindustries.lang.NotImplementedException;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -162,7 +161,7 @@ public class ConcurrentListenerManager<L> implements Closeable {
 	 * A queue of events per listener.  When the queue is null, no executor is running for the listener.
 	 * When the queue is non-null, even when empty, an executor is running for the listener.
 	 */
-	private final Map<L,Queue<EventCall<L>>> listeners = new IdentityHashMap<L,Queue<EventCall<L>>>();
+	private final Map<L,Queue<EventCall<L>>> listeners = new IdentityHashMap<>();
 
 	private final Executors executor = new Executors();
 
@@ -219,7 +218,7 @@ public class ConcurrentListenerManager<L> implements Closeable {
 		synchronized(listeners) {
 			// The future is not finished until all individual calls have removed themselves from this map
 			// and this map is empty.
-			final Map<L,Boolean> unfinishedCalls = new IdentityHashMap<L,Boolean>(listeners.size()*4/3 + 1);
+			final Map<L,Boolean> unfinishedCalls = new IdentityHashMap<>(listeners.size()*4/3 + 1);
 			for(Map.Entry<L,Queue<EventCall<L>>> entry : listeners.entrySet()) {
 				final L listener = entry.getKey();
 				final Runnable call = event.createCall(listener);
@@ -237,14 +236,14 @@ public class ConcurrentListenerManager<L> implements Closeable {
 					// Enqueue asynchronous calls
 					boolean isFirst;
 					if(queue == null) {
-						queue = new LinkedList<EventCall<L>>();
+						queue = new LinkedList<>();
 						entry.setValue(queue);
 						isFirst = true;
 					} else {
 						isFirst = false;
 					}
 					unfinishedCalls.put(listener, Boolean.TRUE);
-					queue.add(new EventCall<L>(unfinishedCalls, call));
+					queue.add(new EventCall<>(unfinishedCalls, call));
 					if(isFirst) {
 						// When the queue is first created, we submit the queue runner to the executor for queue processing
 						// There is only one executor per queue, and on queue per listener
@@ -321,8 +320,9 @@ public class ConcurrentListenerManager<L> implements Closeable {
 				}
 
 				@Override
+				@SuppressWarnings("deprecation")
 				public Object get(long timeout, TimeUnit unit) throws TimeoutException {
-					throw new NotImplementedException();
+					throw new com.aoindustries.lang.NotImplementedException();
 				}
 			};
 		}
