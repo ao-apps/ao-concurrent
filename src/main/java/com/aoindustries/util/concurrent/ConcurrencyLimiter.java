@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2013, 2015, 2016  AO Industries, Inc.
+ * Copyright (C) 2013, 2015, 2016, 2019  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -43,7 +43,7 @@ final public class ConcurrencyLimiter<K,R> {
 		private Throwable throwable;
 	}
 
-	private final Map<K,ResultsCache<R>> executeSerializedStatus = new HashMap<K,ResultsCache<R>>();
+	private final Map<K,ResultsCache<R>> executeSerializedStatus = new HashMap<>();
 
 	public ConcurrencyLimiter() {
 	}
@@ -73,7 +73,7 @@ final public class ConcurrencyLimiter<K,R> {
 			// Look for any existing entry for this key
 			ResultsCache<R> resultsCacheT = executeSerializedStatus.get(key);
 			if(resultsCacheT==null) {
-				executeSerializedStatus.put(key, resultsCacheT = new ResultsCache<R>());
+				executeSerializedStatus.put(key, resultsCacheT = new ResultsCache<>());
 			}
 			resultsCache = resultsCacheT;
 			isFirstThread = resultsCache.threadCount==0;
