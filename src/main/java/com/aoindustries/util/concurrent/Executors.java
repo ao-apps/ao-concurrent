@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2011, 2012, 2013, 2014, 2015, 2016  AO Industries, Inc.
+ * Copyright (C) 2011, 2012, 2013, 2014, 2015, 2016, 2019  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -1396,7 +1396,7 @@ public class Executors implements Disposable {
 	/**
 	 * <p>
 	 * A sequential implementation of executor that performs no concurrent processing.
-	 * All tasks are performed on the thread calling {@link Future#get().
+	 * All tasks are performed on the thread calling {@link Future#get()}.
 	 * </p>
 	 * <p>
 	 * Note: Timeout not implemented
@@ -1422,7 +1422,7 @@ public class Executors implements Disposable {
 	 * If already disposed, no action will be taken and no exception thrown.
 	 * </p>
 	 *
-	 * @see  DISPOSE_WAIT_NANOS
+	 * @see  #DISPOSE_WAIT_NANOS
 	 */
 	@Override
 	public void dispose() {
