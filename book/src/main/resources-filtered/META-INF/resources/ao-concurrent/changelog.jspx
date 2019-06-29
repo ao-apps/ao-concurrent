@@ -36,7 +36,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 		shortTitle="Changelog"
 		tocLevels="1"
 		datePublished="2016-10-29T17:54:36-0500"
-		dateModified="2019-06-19T09:48:11-0500"
+		dateModified="2019-06-29T15:06:06-0500"
 	>
 		<!-- The current snapshot, unreleased version -->
 		<c:set var="version" value="@{com.aoindustries:ao-concurrent:pom.version}" />
@@ -51,7 +51,20 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 				groupId="@{documented.groupId}"
 				artifactId="@{documented.artifactId}"
 				scmUrl="@{documented.scm.url}"
-			/>
+			>
+				<ul>
+					<li>
+						<p>
+							Using <code>;-split-package:=first</code> of <ao:a href="http://felix.apache.org/documentation/subprojects/apache-felix-maven-bundle-plugin-bnd.html">maven-bundle-plugin</ao:a>
+							to avoid packaging the classes in the split-package <code>com.aoindustries.util.concurrent</code> from
+							<core:link book="/ao-lang" page="/index.jspx" />.
+						</p>
+						<p>
+							This split-package is transitional.  In the future we will have more fine-grained <code>*-i18n</code> projects.
+						</p>
+					</li>
+				</ul>
+			</changelog:release>
 		</c:if>
 
 		<changelog:release
