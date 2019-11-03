@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2014, 2015  AO Industries, Inc.
+ * Copyright (C) 2014, 2015, 2019  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -25,6 +25,7 @@ package com.aoindustries.util.concurrent;
 /**
  * A callback that can be registered for asynchronous operation results.
  */
+@FunctionalInterface
 public interface Callback<R> {
 
 	void call(R result);

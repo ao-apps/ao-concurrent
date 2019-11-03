@@ -43,6 +43,7 @@ public class ConcurrentListenerManager<L> implements Closeable {
 
 	private static final Logger logger = Logger.getLogger(ConcurrentListenerManager.class.getName());
 
+	@FunctionalInterface
 	public static interface Event<L> {
 		/**
 		 * Creates the Runnable that will call the event callback on the given listener.
@@ -247,44 +248,39 @@ public class ConcurrentListenerManager<L> implements Closeable {
 					if(isFirst) {
 						// When the queue is first created, we submit the queue runner to the executor for queue processing
 						// There is only one executor per queue, and on queue per listener
-						executor.getUnbounded().submit(
-							new Runnable() {
-								@Override
-								public void run() {
-									while(true) {
-										// Invoke each of the events until the queue is empty
-										EventCall<L> eventCall;
-										synchronized(listeners) {
-											Queue<EventCall<L>> queue = listeners.get(listener);
-											if(queue.isEmpty()) {
-												// Remove the empty queue so a new executor will be submitted on next event
-												listeners.remove(listener);
-												break;
-											} else {
-												eventCall = queue.remove();
-											}
-										}
-										// Run the event without holding the listeners lock
-										try {
-											eventCall.call.run();
-										} catch(ThreadDeath TD) {
-											throw TD;
-										} catch(Throwable t) {
-											logger.log(Level.SEVERE, null, t);
-										}
-										// Remove this listener from unfinished calls
-										synchronized(eventCall.unfinishedCalls) {
-											Boolean removedValue = eventCall.unfinishedCalls.remove(listener);
-											// Notify when the last call completes
-											if(eventCall.unfinishedCalls.isEmpty()) {
-												eventCall.unfinishedCalls.notify();
-											}
-											if(removedValue == null) throw new AssertionError();
-										}
+						executor.getUnbounded().submit(() -> {
+							while(true) {
+								// Invoke each of the events until the queue is empty
+								EventCall<L> eventCall;
+								synchronized(listeners) {
+									Queue<EventCall<L>> queue1 = listeners.get(listener);
+									if(queue1.isEmpty()) {
+										// Remove the empty queue so a new executor will be submitted on next event
+										listeners.remove(listener);
+										break;
+									} else {
+										eventCall = queue1.remove();
 									}
 								}
+								// Run the event without holding the listeners lock
+								try {
+									eventCall.call.run();
+								} catch(ThreadDeath TD) {
+									throw TD;
+								} catch(Throwable t) {
+									logger.log(Level.SEVERE, null, t);
+								}
+								// Remove this listener from unfinished calls
+								synchronized(eventCall.unfinishedCalls) {
+									Boolean removedValue = eventCall.unfinishedCalls.remove(listener);
+									// Notify when the last call completes
+									if(eventCall.unfinishedCalls.isEmpty()) {
+										eventCall.unfinishedCalls.notify();
+									}
+									if(removedValue == null) throw new AssertionError();
+								}
 							}
-						);
+						});
 					}
 				}
 			}
