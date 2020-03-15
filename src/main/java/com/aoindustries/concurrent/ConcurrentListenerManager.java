@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2014, 2015, 2019  AO Industries, Inc.
+ * Copyright (C) 2014, 2015, 2019, 2020  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -20,7 +20,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with ao-concurrent.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.aoindustries.util.concurrent;
+package com.aoindustries.concurrent;
 
 import java.io.Closeable;
 import java.util.Collection;
