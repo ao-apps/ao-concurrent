@@ -35,12 +35,8 @@ import java.util.concurrent.Future;
  */
 public interface Executor extends java.util.concurrent.Executor {
 
-	// Java 1.8: default interface method
 	@Override
 	void execute(Runnable command);
-	//{
-	//	submit(command);
-	//}
 
 	/**
 	 * Submits to the executor.
@@ -62,7 +58,6 @@ public interface Executor extends java.util.concurrent.Executor {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	// Java 1.8: default interface method
 	<T> List<T> callAll(Collection<? extends Callable<? extends T>> tasks) throws DisposedException, InterruptedException, ExecutionException;
 
 	/**
@@ -104,7 +99,6 @@ public interface Executor extends java.util.concurrent.Executor {
 	 *
 	 * @exception  DisposedException  if already disposed.
 	 */
-	// Java 1.8: default interface method
 	void runAll(Collection<? extends Runnable> tasks) throws DisposedException, InterruptedException, ExecutionException;
 
 	/**
