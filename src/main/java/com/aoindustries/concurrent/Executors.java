@@ -518,7 +518,7 @@ public class Executors implements Disposable {
 				}
 			}
 		);
-		IncompleteFuture<T> incompleteFuture = new IncompleteFuture<T>(threadFactory, incompleteFutureId, future);
+		IncompleteFuture<T> incompleteFuture = new IncompleteFuture<>(threadFactory, incompleteFutureId, future);
 		incompleteFutures.put(incompleteFutureId, incompleteFuture);
 		return incompleteFuture;
 	}
@@ -549,7 +549,7 @@ public class Executors implements Disposable {
 			},
 			result
 		);
-		IncompleteFuture<T> future = new IncompleteFuture<T>(threadFactory, incompleteFutureId, submitted);
+		IncompleteFuture<T> future = new IncompleteFuture<>(threadFactory, incompleteFutureId, submitted);
 		incompleteFutures.put(incompleteFutureId, future);
 		return future;
 	}
@@ -621,7 +621,7 @@ public class Executors implements Disposable {
 		long delay
 	) {
 		final Long incompleteFutureId = nextIncompleteFutureId.getAndIncrement();
-		IncompleteCallableTimerTask<T> timerTask = new IncompleteCallableTimerTask<T>(threadFactory, executorService, incompleteFutureId, task);
+		IncompleteCallableTimerTask<T> timerTask = new IncompleteCallableTimerTask<>(threadFactory, executorService, incompleteFutureId, task);
 		getTimer().schedule(timerTask, delay);
 		incompleteFutures.put(incompleteFutureId, timerTask);
 		return timerTask;
@@ -638,7 +638,7 @@ public class Executors implements Disposable {
 		long delay
 	) {
 		final Long incompleteFutureId = nextIncompleteFutureId.getAndIncrement();
-		IncompleteRunnableTimerTask<T> timerTask = new IncompleteRunnableTimerTask<T>(threadFactory, executorService, incompleteFutureId, task, result);
+		IncompleteRunnableTimerTask<T> timerTask = new IncompleteRunnableTimerTask<>(threadFactory, executorService, incompleteFutureId, task, result);
 		getTimer().schedule(timerTask, delay);
 		incompleteFutures.put(incompleteFutureId, timerTask);
 		return timerTask;
@@ -652,7 +652,7 @@ public class Executors implements Disposable {
 	 * @see  I18nThreadLocalCallable This default implementation maintains internationalization context.
 	 */
 	protected <T> Callable<T> wrap(Callable<T> task) {
-		return new I18nThreadLocalCallable<T>(task);
+		return new I18nThreadLocalCallable<>(task);
 	}
 
 	/**
@@ -741,8 +741,8 @@ public class Executors implements Disposable {
 				} else {
 					taskList = new ArrayList<Callable<? extends T>>(tasks);
 				}
-				List<Future<T>> futures = new ArrayList<Future<T>>(size - 1); // Last one called by current thread
-				List<T> results = new ArrayList<T>(size);
+				List<Future<T>> futures = new ArrayList<>(size - 1); // Last one called by current thread
+				List<T> results = new ArrayList<>(size);
 				for(int i=0; i<size; i++) {
 					Callable<? extends T> task = taskList.get(i);
 					if(i < (size - 1)) {
@@ -818,7 +818,7 @@ public class Executors implements Disposable {
 				} else {
 					taskList = new ArrayList<Runnable>(tasks);
 				}
-				List<Future<?>> futures = new ArrayList<Future<?>>(size - 1); // Last one ran by current thread
+				List<Future<?>> futures = new ArrayList<>(size - 1); // Last one ran by current thread
 				for(int i=0; i<size; i++) {
 					Runnable task = taskList.get(i);
 					if(i < (size - 1)) {
@@ -941,7 +941,7 @@ public class Executors implements Disposable {
 		 */
 		@Override
 		protected <T> Callable<T> wrap(Callable<T> task) {
-			return super.wrap(new ThreadLocalCallable<T>(task, PerProcessorExecutor.currentThreadPerProcessorIndex));
+			return super.wrap(new ThreadLocalCallable<>(task, PerProcessorExecutor.currentThreadPerProcessorIndex));
 		}
 
 		/**
@@ -1118,7 +1118,7 @@ public class Executors implements Disposable {
 						ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
 							numThreads, numThreads,
 							60L, TimeUnit.SECONDS,
-							new LinkedBlockingQueue<Runnable>(),
+							new LinkedBlockingQueue<>(),
 							perProcessorThreadFactory
 						);
 						threadPool.allowCoreThreadTimeOut(true);
@@ -1330,7 +1330,7 @@ public class Executors implements Disposable {
 
 			@Override
 			public <T> Future<T> submit(Callable<T> task) {
-				return new SequentialFuture<T>(task, executors.unbounded);
+				return new SequentialFuture<>(task, executors.unbounded);
 			}
 
 			@Override
@@ -1365,7 +1365,7 @@ public class Executors implements Disposable {
 							tasks.iterator().next().call()
 						);
 					} else {
-						List<T> results = new ArrayList<T>(size);
+						List<T> results = new ArrayList<>(size);
 						for(Callable<? extends T> task : tasks) {
 							results.add(task.call());
 						}
@@ -1446,7 +1446,7 @@ public class Executors implements Disposable {
 				incompleteFutures.clear();
 			} else {
 				// Build list of tasks that should be waited for.
-				final List<ThreadFactoryFuture<?>> waitFutures = new ArrayList<ThreadFactoryFuture<?>>(incompleteFutures.values());
+				final List<ThreadFactoryFuture<?>> waitFutures = new ArrayList<>(incompleteFutures.values());
 				incompleteFutures.clear();
 				ThreadFactory tf = currentThreadFactory.get();
 				final long waitUntil = System.nanoTime() + DISPOSE_WAIT_NANOS;
@@ -1458,7 +1458,7 @@ public class Executors implements Disposable {
 					// Never wait for own thread (causes stall every time)
 					if(tf != future.getThreadFactory()) {
 						// Queue to call cancel at end, can't wait from this thread
-						if(ownThreadFactoryWaitFutures == null) ownThreadFactoryWaitFutures = new ArrayList<ThreadFactoryFuture<?>>(size);
+						if(ownThreadFactoryWaitFutures == null) ownThreadFactoryWaitFutures = new ArrayList<>(size);
 						ownThreadFactoryWaitFutures.add(future);
 					} else {
 						long nanosRemaining = waitUntil - System.nanoTime();

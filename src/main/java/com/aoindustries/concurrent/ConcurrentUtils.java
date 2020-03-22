@@ -56,7 +56,7 @@ final public class ConcurrentUtils {
 	 */
 	public static <E> List<E> getAll(Iterable<? extends Future<? extends E>> futures) throws InterruptedException, ExecutionException {
 		int startSize = (futures instanceof Collection<?>) ? ((Collection<?>)futures).size() : 10;
-		return getAll(futures, new ArrayList<E>(startSize));
+		return getAll(futures, new ArrayList<>(startSize));
 	}
 
 	/**
@@ -76,7 +76,7 @@ final public class ConcurrentUtils {
 	 * The map will maintain the iteration order of the source.
 	 */
 	public static <K,V> Map<K,V> getAll(Map<? extends K,? extends Future<? extends V>> futures) throws InterruptedException, ExecutionException {
-		return getAll(futures, new LinkedHashMap<K,V>(futures.size()*4/3+1));
+		return getAll(futures, new LinkedHashMap<>(futures.size()*4/3+1));
 	}
 
 	/**
