@@ -86,6 +86,8 @@ final public class ConcurrencyLimiter<K,R> {
 					// Invoke callable
 					try {
 						resultsCache.result = callable.call();
+					} catch(ThreadDeath td) {
+						throw td;
 					} catch(Throwable throwable) {
 						resultsCache.throwable = throwable;
 					}

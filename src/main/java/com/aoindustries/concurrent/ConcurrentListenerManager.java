@@ -228,8 +228,8 @@ public class ConcurrentListenerManager<L> implements Closeable {
 					// Call synchronous listeners immediately
 					try {
 						call.run();
-					} catch(ThreadDeath TD) {
-						throw TD;
+					} catch(ThreadDeath td) {
+						throw td;
 					} catch(Throwable t) {
 						logger.log(Level.SEVERE, null, t);
 					}
@@ -265,8 +265,8 @@ public class ConcurrentListenerManager<L> implements Closeable {
 								// Run the event without holding the listeners lock
 								try {
 									eventCall.call.run();
-								} catch(ThreadDeath TD) {
-									throw TD;
+								} catch(ThreadDeath td) {
+									throw td;
 								} catch(Throwable t) {
 									logger.log(Level.SEVERE, null, t);
 								}

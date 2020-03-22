@@ -1440,9 +1440,7 @@ public class Executors implements Disposable {
 							);
 							try {
 								future.get(nanosRemaining, TimeUnit.NANOSECONDS);
-							} catch(CancellationException e) {
-								// OK on shutdown
-							} catch(ExecutionException e) {
+							} catch(CancellationException | ExecutionException e) {
 								// OK on shutdown
 							} catch(InterruptedException e) {
 								// OK on shutdown
@@ -1478,9 +1476,7 @@ public class Executors implements Disposable {
 								);
 								try {
 									future.get(nanosRemaining, TimeUnit.NANOSECONDS);
-								} catch(CancellationException e) {
-									// OK on shutdown
-								} catch(ExecutionException e) {
+								} catch(CancellationException | ExecutionException e) {
 									// OK on shutdown
 								} catch(InterruptedException e) {
 									// OK on shutdown
