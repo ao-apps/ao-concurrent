@@ -124,12 +124,9 @@ public class Executors implements Disposable {
 			if(logger.isLoggable(Level.FINER)) logger.log(Level.FINER, "newThread={0}", name);
 			Thread t = new Thread(
 				/*group, */
-				new Runnable() {
-					@Override
-					public void run() {
-						currentThreadFactory.set(PrefixThreadFactory.this);
-						target.run();
-					}
+				() -> {
+					currentThreadFactory.set(PrefixThreadFactory.this);
+					target.run();
 				},
 				name
 			);
@@ -504,17 +501,14 @@ public class Executors implements Disposable {
 	) {
 		final Long incompleteFutureId = nextIncompleteFutureId.getAndIncrement();
 		final Future<T> future = executorService.submit(
-			new Callable<T>() {
-				/**
-				 * Remove from incomplete when call completed.
-				 */
-				@Override
-				public T call() throws Exception {
-					try {
-						return task.call();
-					} finally {
-						incompleteFutures.remove(incompleteFutureId);
-					}
+			/**
+			 * Remove from incomplete when call completed.
+			 */
+			() -> {
+				try {
+					return task.call();
+				} finally {
+					incompleteFutures.remove(incompleteFutureId);
 				}
 			}
 		);
@@ -534,17 +528,14 @@ public class Executors implements Disposable {
 	) {
 		final Long incompleteFutureId = nextIncompleteFutureId.getAndIncrement();
 		final Future<T> submitted = executorService.submit(
-			new Runnable() {
-				/**
-				 * Remove from incomplete when run finished.
-				 */
-				@Override
-				public void run() {
-					try {
-						task.run();
-					} finally {
-						incompleteFutures.remove(incompleteFutureId);
-					}
+			/**
+			 * Remove from incomplete when run finished.
+			 */
+			() -> {
+				try {
+					task.run();
+				} finally {
+					incompleteFutures.remove(incompleteFutureId);
 				}
 			},
 			result
@@ -875,24 +866,21 @@ public class Executors implements Disposable {
 		private static void dispose() {
 			final ExecutorServiceWrapper ues = unboundedExecutorService.getAndSet(null);
 			if(ues != null) {
-				Runnable uesShutdown = new Runnable() {
-					@Override
-					public void run() {
-						try {
-							ues.executorService.shutdown();
-						} catch(SecurityException e) {
-							logger.log(Level.WARNING, null, e);
+				Runnable uesShutdown = () -> {
+					try {
+						ues.executorService.shutdown();
+					} catch(SecurityException e) {
+						logger.log(Level.WARNING, null, e);
+					}
+					try {
+						if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "awaiting termination of unboundedExecutorService");
+						if(ues.executorService.awaitTermination(DISPOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
+							ues.removeShutdownHook();
 						}
-						try {
-							if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "awaiting termination of unboundedExecutorService");
-							if(ues.executorService.awaitTermination(DISPOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
-								ues.removeShutdownHook();
-							}
-						} catch(InterruptedException e) {
-							logger.log(Level.WARNING, null, e);
-							// Restore the interrupted status
-							Thread.currentThread().interrupt();
-						}
+					} catch(InterruptedException e) {
+						logger.log(Level.WARNING, null, e);
+						// Restore the interrupted status
+						Thread.currentThread().interrupt();
 					}
 				};
 				// Never wait for own thread (causes stall every time)
@@ -1002,16 +990,11 @@ public class Executors implements Disposable {
 				) {
 					@Override
 					public Thread newThread(final Runnable target) {
-						return super.newThread(
-							new Runnable() {
-								@Override
-								public void run() {
-									assert currentThreadPerProcessorIndex.get() == null;
-									currentThreadPerProcessorIndex.set(indexObj);
-									target.run();
-								}
-							}
-						);
+						return super.newThread(() -> {
+							assert currentThreadPerProcessorIndex.get() == null;
+							currentThreadPerProcessorIndex.set(indexObj);
+							target.run();
+						});
 					}
 				};
 				while(threadFactories.size() <= index) threadFactories.add(null);
@@ -1031,24 +1014,21 @@ public class Executors implements Disposable {
 					final int index = i;
 					final ExecutorServiceWrapper ppes = perProcessorExecutorServices.get(index);
 					if(ppes != null) {
-						Runnable ppesShutdown = new Runnable() {
-							@Override
-							public void run() {
-								try {
-									ppes.executorService.shutdown();
-								} catch(SecurityException e) {
-									logger.log(Level.WARNING, null, e);
+						Runnable ppesShutdown = () -> {
+							try {
+								ppes.executorService.shutdown();
+							} catch(SecurityException e) {
+								logger.log(Level.WARNING, null, e);
+							}
+							try {
+								if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "awaiting termination of perProcessorExecutorServices[{0}]", index);
+								if(ppes.executorService.awaitTermination(DISPOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
+									ppes.removeShutdownHook();
 								}
-								try {
-									if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "awaiting termination of perProcessorExecutorServices[{0}]", index);
-									if(ppes.executorService.awaitTermination(DISPOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
-										ppes.removeShutdownHook();
-									}
-								} catch(InterruptedException e) {
-									logger.log(Level.WARNING, null, e);
-									// Restore the interrupted status
-									Thread.currentThread().interrupt();
-								}
+							} catch(InterruptedException e) {
+								logger.log(Level.WARNING, null, e);
+								// Restore the interrupted status
+								Thread.currentThread().interrupt();
 							}
 						};
 						perProcessorExecutorServices.set(index, null);
@@ -1281,12 +1261,7 @@ public class Executors implements Disposable {
 					}
 				}
 				try {
-					return unboundedExecutor.submit(new Callable<V>() {
-						@Override
-						public V call() throws Exception {
-							return SequentialFuture.this.get();
-						}
-					}).get(
+					return unboundedExecutor.submit(() -> SequentialFuture.this.get()).get(
 						timeout,
 						unit
 					);
@@ -1314,11 +1289,8 @@ public class Executors implements Disposable {
 			command.run();
 		}
 
-		private static final ThreadFactory sequentialThreadFactory = new ThreadFactory() {
-			@Override
-			public Thread newThread(Runnable r) {
-				throw new IllegalStateException("No threads should be created by the sequential executor");
-			}
+		private static final ThreadFactory sequentialThreadFactory = (Runnable r) -> {
+			throw new IllegalStateException("No threads should be created by the sequential executor");
 		};
 
 		@Override
@@ -1335,15 +1307,10 @@ public class Executors implements Disposable {
 
 			@Override
 			public <T> Future<T> submit(final Runnable task, final T result) {
-				return submit(
-					new Callable<T>() {
-						@Override
-						public T call() {
-							task.run();
-							return result;
-						}
-					}
-				);
+				return submit(() -> {
+					task.run();
+					return result;
+				});
 			}
 		};
 
@@ -1496,46 +1463,41 @@ public class Executors implements Disposable {
 				if(ownThreadFactoryWaitFutures != null) {
 					final List<ThreadFactoryFuture<?>> waitOnOtherThreads = ownThreadFactoryWaitFutures;
 					// Cancel all from our thread factory on a different thread to avoid deadlock
-					new Thread(
-						new Runnable() {
-							@Override
-							public void run() {
-								for(int i=0, size=waitOnOtherThreads.size(); i<size; i++) {
-									ThreadFactoryFuture<?> future = waitOnOtherThreads.get(i);
-									long nanosRemaining = waitUntil - System.nanoTime();
-									if(nanosRemaining >= 0) {
-										if(logger.isLoggable(Level.FINE)) logger.log(
-											Level.FINE,
-											"Waiting on waitOnOtherThreads[{0}], {1} ns remaining",
-											new Object[] {
-												i,
-												nanosRemaining
-											}
-										);
-										try {
-											future.get(nanosRemaining, TimeUnit.NANOSECONDS);
-										} catch(CancellationException e) {
-											// OK on shutdown
-										} catch(ExecutionException e) {
-											// OK on shutdown
-										} catch(InterruptedException e) {
-											// OK on shutdown
-											// Restore the interrupted status
-											Thread.currentThread().interrupt();
-										} catch(TimeoutException e) {
-											// Cancel after timeout
-											//logger.log(Level.WARNING, null, e);
-											future.cancel(true);
-										}
-									} else {
-										// No time remaining, just cancel
-										if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "No time left, canceling waitOnOtherThreads[{0}]", i);
-										future.cancel(true);
+					new Thread(() -> {
+						for(int i=0, size=waitOnOtherThreads.size(); i<size; i++) {
+							ThreadFactoryFuture<?> future = waitOnOtherThreads.get(i);
+							long nanosRemaining = waitUntil - System.nanoTime();
+							if(nanosRemaining >= 0) {
+								if(logger.isLoggable(Level.FINE)) logger.log(
+									Level.FINE,
+									"Waiting on waitOnOtherThreads[{0}], {1} ns remaining",
+									new Object[] {
+										i,
+										nanosRemaining
 									}
+								);
+								try {
+									future.get(nanosRemaining, TimeUnit.NANOSECONDS);
+								} catch(CancellationException e) {
+									// OK on shutdown
+								} catch(ExecutionException e) {
+									// OK on shutdown
+								} catch(InterruptedException e) {
+									// OK on shutdown
+									// Restore the interrupted status
+									Thread.currentThread().interrupt();
+								} catch(TimeoutException e) {
+									// Cancel after timeout
+									//logger.log(Level.WARNING, null, e);
+									future.cancel(true);
 								}
+							} else {
+								// No time remaining, just cancel
+								if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "No time left, canceling waitOnOtherThreads[{0}]", i);
+								future.cancel(true);
 							}
 						}
-					).start();
+					}).start();
 				}
 			}
 		}
