@@ -57,6 +57,7 @@ final public class ConcurrencyLimiter<K,R> {
 	 * </p>
 	 * <p>
 	 * Consider the following scenario:
+	 * </p>
 	 * <ol>
 	 *   <li>Thread A invokes MySQL: "CHECK TABLE example FAST QUICK"</li>
 	 *   <li>Thread B invokes MySQL: "CHECK TABLE example FAST QUICK" before Thread A has finished</li>
@@ -64,7 +65,6 @@ final public class ConcurrencyLimiter<K,R> {
 	 *   <li>Thread A completes, passes results to Thread B</li>
 	 *   <li>Threads A and B both return the results obtained only by Thread A</li>
 	 * </ol>
-	 * </p>
 	 */
 	public R executeSerialized(K key, Callable<? extends R> callable) throws InterruptedException, ExecutionException {
 		final boolean isFirstThread;
