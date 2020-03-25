@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang3.NotImplementedException;
 
 /**
  * Provides per-listener event queues, and fires off events concurrently across
@@ -316,9 +317,8 @@ public class ConcurrentListenerManager<L> implements Closeable {
 				}
 
 				@Override
-				@SuppressWarnings("deprecation")
 				public Object get(long timeout, TimeUnit unit) throws TimeoutException {
-					throw new com.aoindustries.exception.NotImplementedException();
+					throw new NotImplementedException("TODO");
 				}
 			};
 		}
