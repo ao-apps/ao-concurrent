@@ -318,7 +318,7 @@ public class ConcurrentListenerManager<L> implements Closeable {
 				@Override
 				@SuppressWarnings("deprecation")
 				public Object get(long timeout, TimeUnit unit) throws TimeoutException {
-					throw new com.aoindustries.lang.NotImplementedException();
+					throw new com.aoindustries.exception.NotImplementedException();
 				}
 			};
 		}
