@@ -182,6 +182,7 @@ public class Executors implements Disposable {
 		}
 		if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "activeCount={0}", newActiveCount);
 		// Use sequential executor on single-CPU systems
+		// TODO: Don't use perProcessor substitution since tasks only completed if future.get is called
 		perProcessor = preferredConcurrency==1 ? null : new PerProcessorExecutor(this);
 	}
 	// </editor-fold>
@@ -1368,7 +1369,18 @@ public class Executors implements Disposable {
 	 * All tasks are performed on the thread calling {@link Future#get()}.
 	 * </p>
 	 * <p>
+	 * <b>Note:</b> In the current implementation, a task submitted to this
+	 * sequential executor is only processed when {@link Future#get()} is called.
+	 * Thus, a task submitted without this call to {@link Future#get()} is never
+	 * executed.  This is in stark contrast to other executors, which will
+	 * complete the task regardless.
+	 * </p>
+	 * <p>
 	 * Note: Timeout not implemented
+	 * </p>
+	 * <p>
+	 * TODO: Execute on submit and store result for Future.get, so the task is
+	 * always completed even if Future.get is never called.
 	 * </p>
 	 */
 	public Executor getSequential() {
