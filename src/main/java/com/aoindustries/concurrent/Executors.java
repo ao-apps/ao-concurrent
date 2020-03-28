@@ -181,9 +181,7 @@ public class Executors implements Disposable {
 			throw new IllegalStateException("activeCount integer wraparound detected");
 		}
 		if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "activeCount={0}", newActiveCount);
-		// Use sequential executor on single-CPU systems
-		// TODO: Don't use perProcessor substitution since tasks only completed if future.get is called
-		perProcessor = preferredConcurrency==1 ? null : new PerProcessorExecutor(this);
+		perProcessor = new PerProcessorExecutor(this);
 	}
 	// </editor-fold>
 
@@ -1122,8 +1120,7 @@ public class Executors implements Disposable {
 	/**
 	 * <p>
 	 * An executor service that will execute at most two tasks per processor on
-	 * multi-CPU systems.  On single-CPU systems returns the sequential executor
-	 * (see {@link #getSequential()}).
+	 * multi-CPU systems or one task on single-CPU systems.
 	 * </p>
 	 * <p>
 	 * This should be used for CPU-bound tasks that generally operate non-blocking.
@@ -1147,11 +1144,9 @@ public class Executors implements Disposable {
 	 * </p>
 	 *
 	 * @see  #getPreferredConcurrency()  to determine how many threads may be allocated per executor.
-	 * @see  #getSequential()  the executor that will be used in single-CPU systems
 	 */
 	public Executor getPerProcessor() {
-		// Use sequential executor on single-CPU systems
-		return preferredConcurrency==1 ? sequential : perProcessor;
+		return perProcessor;
 	}
 	// </editor-fold>
 
@@ -1369,18 +1364,14 @@ public class Executors implements Disposable {
 	 * All tasks are performed on the thread calling {@link Future#get()}.
 	 * </p>
 	 * <p>
-	 * <b>Note:</b> In the current implementation, a task submitted to this
+	 * <b>Important:</b> A task submitted to this
 	 * sequential executor is only processed when {@link Future#get()} is called.
-	 * Thus, a task submitted without this call to {@link Future#get()} is never
+	 * Thus, a task submitted without a call to {@link Future#get()} is never
 	 * executed.  This is in stark contrast to other executors, which will
 	 * complete the task regardless.
 	 * </p>
 	 * <p>
-	 * Note: Timeout not implemented
-	 * </p>
-	 * <p>
-	 * TODO: Execute on submit and store result for Future.get, so the task is
-	 * always completed even if Future.get is never called.
+	 * <b>Note:</b> Timeout not implemented
 	 * </p>
 	 */
 	public Executor getSequential() {
