@@ -37,7 +37,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 		shortTitle="Changelog"
 		tocLevels="1"
 		datePublished="2016-10-29T17:54:36-0500"
-		dateModified="2020-03-28T00:08:03-05:00"
+		dateModified="2020-03-28T00:15:42-05:00"
 	>
 		<!-- The current snapshot, unreleased version -->
 		<c:set var="version" value="@{com.aoindustries:ao-concurrent:pom.version}" />
@@ -52,18 +52,27 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 				groupId="@{project.groupId}"
 				artifactId="@{documented.artifactId}"
 				scmUrl="@{project.scm.url}"
-			>
-				<ul>
-					<li>
-						The sequential executor is no longer substituted in place of the per-processor
-						executor on single-CPU systems.  This is because the sequential executor and
-						per-processor executor have different behavior when <code>Future.get(…)</code> is never called.
-						When <code>Future.get(…)</code> is never called, the sequential executor does
-						not execute the task while the per-processor will still execute it in the background.
-					</li>
-				</ul>
-			</changelog:release>
+			/>
 		</c:if>
+
+		<changelog:release
+			projectName="@{documented.name}"
+			version="2.0.1"
+			datePublished="2020-03-28T00:15:42-05:00"
+			groupId="@{project.groupId}"
+			artifactId="@{documented.artifactId}"
+			scmUrl="@{project.scm.url}"
+		>
+			<ul>
+				<li>
+					The sequential executor is no longer substituted in place of the per-processor
+					executor on single-CPU systems.  This is because the sequential executor and
+					per-processor executor have different behavior when <code>Future.get(…)</code> is never called.
+					When <code>Future.get(…)</code> is never called, the sequential executor does
+					not execute the task while the per-processor will still execute it in the background.
+				</li>
+			</ul>
+		</changelog:release>
 
 		<changelog:release
 			projectName="@{documented.name}"
