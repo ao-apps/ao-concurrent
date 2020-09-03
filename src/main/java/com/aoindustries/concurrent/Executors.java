@@ -709,6 +709,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
+		@SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
 		public <T> List<T> callAll(Collection<? extends Callable<? extends T>> tasks) throws DisposedException, InterruptedException, ExecutionException {
 			if(executors.disposed.get()) throw new DisposedException();
 			int size = tasks.size();
@@ -717,9 +718,7 @@ public class Executors implements Disposable {
 			} else if(size == 1) {
 				try {
 					return Collections.singletonList(tasks.iterator().next().call());
-				} catch(ThreadDeath td) {
-					throw td;
-				} catch(InterruptedException e) {
+				} catch(ThreadDeath | InterruptedException e) {
 					throw e;
 				} catch(Throwable t) {
 					throw new ExecutionException(t);
@@ -745,8 +744,6 @@ public class Executors implements Disposable {
 							results.add(task.call());
 						} catch(ThreadDeath td) {
 							throw td;
-						} catch(InterruptedException e) {
-							throw e;
 						} catch(Throwable t) {
 							throw new ExecutionException(t);
 						}
@@ -996,7 +993,9 @@ public class Executors implements Disposable {
 						});
 					}
 				};
-				while(threadFactories.size() <= index) threadFactories.add(null);
+				while(threadFactories.size() <= index) {
+					threadFactories.add(null);
+				}
 				threadFactories.set(index, perProcessorThreadFactory);
 			}
 			return perProcessorThreadFactory;
@@ -1107,7 +1106,9 @@ public class Executors implements Disposable {
 						executorService,
 						perProcessorThreadFactory.namePrefix + "shutdownHook"
 					);
-					while(perProcessorExecutorServices.size() <= index) perProcessorExecutorServices.add(null);
+					while(perProcessorExecutorServices.size() <= index) {
+						perProcessorExecutorServices.add(null);
+					}
 					if(perProcessorExecutorServices.set(index, perProcessorExecutorService) != null) throw new AssertionError();
 				}
 				return perProcessorExecutorService;
@@ -1206,6 +1207,7 @@ public class Executors implements Disposable {
 			}
 
 			@Override
+			@SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
 			public V get() throws InterruptedException, CancellationException, ExecutionException {
 				synchronized(lock) {
 					while(true) {
@@ -1231,7 +1233,7 @@ public class Executors implements Disposable {
 						lock.notifyAll();
 					}
 					return r;
-				} catch(ThreadDeath td) {
+				} catch(ThreadDeath | InterruptedException td) {
 					throw td;
 				} catch(Throwable t) {
 					synchronized(lock) {
@@ -1317,6 +1319,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
+		@SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
 		public <T> List<T> callAll(Collection<? extends Callable<? extends T>> tasks) throws InterruptedException, ExecutionException {
 			int size = tasks.size();
 			if(size == 0) {
@@ -1334,9 +1337,7 @@ public class Executors implements Disposable {
 						}
 						return Collections.unmodifiableList(results);
 					}
-				} catch(ThreadDeath td) {
-					throw td;
-				} catch(InterruptedException e) {
+				} catch(ThreadDeath | InterruptedException e) {
 					throw e;
 				} catch(Throwable t) {
 					throw new ExecutionException(t);
@@ -1347,7 +1348,9 @@ public class Executors implements Disposable {
 		@Override
 		public void runAll(Collection<? extends Runnable> tasks) throws ExecutionException {
 			try {
-				for(Runnable task : tasks) task.run();
+				for(Runnable task : tasks) {
+					task.run();
+				}
 			} catch(ThreadDeath td) {
 				throw td;
 			} catch(Throwable t) {
@@ -1499,22 +1502,6 @@ public class Executors implements Disposable {
 					}).start();
 				}
 			}
-		}
-	}
-
-	/**
-	 * Do not rely on the finalizer - this is just in case something is way off
-	 * and the calling code doesn't correctly dispose their instances.
-	 *
-     * @deprecated The finalization mechanism is inherently problematic.
-	 */
-    @Deprecated // Java 9: (since="9")
-	@Override
-	protected void finalize() throws Throwable {
-		try {
-			dispose();
-		} finally {
-			super.finalize();
 		}
 	}
 	// </editor-fold>

@@ -66,6 +66,7 @@ final public class ConcurrencyLimiter<K,R> {
 	 *   <li>Threads A and B both return the results obtained only by Thread A</li>
 	 * </ol>
 	 */
+	@SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
 	public R executeSerialized(K key, Callable<? extends R> callable) throws InterruptedException, ExecutionException {
 		final boolean isFirstThread;
 		final ResultsCache<R> resultsCache;
