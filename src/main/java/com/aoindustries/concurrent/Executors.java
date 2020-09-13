@@ -66,6 +66,7 @@ import java.util.logging.Logger;
  * Also allows for delayed execution of tasks using an internal Timer.
  * </p>
  */
+// TODO: Convert from Disposable to AutoCloseable
 public class Executors implements Disposable {
 
 	private static final Logger logger = Logger.getLogger(Executors.class.getName());
