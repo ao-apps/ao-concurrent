@@ -22,6 +22,7 @@
  */
 package com.aoindustries.concurrent;
 
+import com.aoindustries.collections.AoCollections;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -76,7 +77,7 @@ final public class ConcurrentUtils {
 	 * The map will maintain the iteration order of the source.
 	 */
 	public static <K,V> Map<K,V> getAll(Map<? extends K,? extends Future<? extends V>> futures) throws InterruptedException, ExecutionException {
-		return getAll(futures, new LinkedHashMap<>(futures.size()*4/3+1));
+		return getAll(futures, AoCollections.newLinkedHashMap(futures.size()));
 	}
 
 	/**

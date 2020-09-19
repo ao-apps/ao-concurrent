@@ -22,6 +22,7 @@
  */
 package com.aoindustries.concurrent;
 
+import com.aoindustries.collections.AoCollections;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.IdentityHashMap;
@@ -220,7 +221,7 @@ public class ConcurrentListenerManager<L> implements Closeable {
 		synchronized(listeners) {
 			// The future is not finished until all individual calls have removed themselves from this map
 			// and this map is empty.
-			final Map<L,Boolean> unfinishedCalls = new IdentityHashMap<>(listeners.size()*4/3 + 1);
+			final Map<L,Boolean> unfinishedCalls = AoCollections.newIdentityHashMap(listeners.size());
 			for(Map.Entry<L,Queue<EventCall<L>>> entry : listeners.entrySet()) {
 				final L listener = entry.getKey();
 				final Runnable call = event.createCall(listener);
