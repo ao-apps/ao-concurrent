@@ -22,7 +22,6 @@
  */
 package com.aoindustries.concurrent;
 
-import com.aoindustries.lang.AutoCloseableE;
 import com.aoindustries.lang.RuntimeUtils;
 import com.aoindustries.util.concurrent.ThreadLocalCallable;
 import com.aoindustries.util.concurrent.ThreadLocalRunnable;
@@ -65,7 +64,7 @@ import java.util.logging.Logger;
  * Also allows for delayed execution of tasks using an internal Timer.
  * </p>
  */
-public class Executors implements AutoCloseableE<RuntimeException> {
+public class Executors implements AutoCloseable {
 
 	private static final Logger logger = Logger.getLogger(Executors.class.getName());
 

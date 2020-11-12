@@ -23,7 +23,6 @@
 package com.aoindustries.concurrent;
 
 import com.aoindustries.collections.AoCollections;
-import com.aoindustries.lang.AutoCloseableE;
 import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -41,7 +40,7 @@ import org.apache.commons.lang3.NotImplementedException;
  * Provides per-listener event queues, and fires off events concurrently across
  * listeners, but in-order per listener.
  */
-public class ConcurrentListenerManager<L> implements AutoCloseableE<RuntimeException> {
+public class ConcurrentListenerManager<L> implements AutoCloseable {
 
 	private static final Logger logger = Logger.getLogger(ConcurrentListenerManager.class.getName());
 
