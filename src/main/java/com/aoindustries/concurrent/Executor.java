@@ -22,7 +22,6 @@
  */
 package com.aoindustries.concurrent;
 
-import com.aoindustries.lang.DisposedException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -43,9 +42,9 @@ public interface Executor extends java.util.concurrent.Executor {
 	 *
 	 * @see  Executors#wrap(java.util.concurrent.Callable)
 	 *
-	 * @exception  DisposedException  if already disposed.
+	 * @exception  IllegalStateException  if already closed.
 	 */
-	<T> Future<T> submit(Callable<? extends T> task) throws DisposedException;
+	<T> Future<T> submit(Callable<? extends T> task) throws IllegalStateException;
 
 	/**
 	 * Calls all of the tasks concurrently, waiting for them to all complete.
@@ -56,18 +55,18 @@ public interface Executor extends java.util.concurrent.Executor {
 	 * 
 	 * @see  Executors#wrap(java.util.concurrent.Callable)
 	 *
-	 * @exception  DisposedException  if already disposed.
+	 * @exception  IllegalStateException  if already closed.
 	 */
-	<T> List<T> callAll(Collection<? extends Callable<? extends T>> tasks) throws DisposedException, InterruptedException, ExecutionException;
+	<T> List<T> callAll(Collection<? extends Callable<? extends T>> tasks) throws IllegalStateException, InterruptedException, ExecutionException;
 
 	/**
 	 * Submits to the executor after the provided delay.
 	 * 
 	 * @see  Executors#wrap(java.util.concurrent.Callable)
 	 *
-	 * @exception  DisposedException  if already disposed.
+	 * @exception  IllegalStateException  if already closed.
 	 */
-	<T> Future<T> submit(Callable<? extends T> task, long delay) throws DisposedException;
+	<T> Future<T> submit(Callable<? extends T> task, long delay) throws IllegalStateException;
 
 	/**
 	 * Submits to the executor,
@@ -75,18 +74,18 @@ public interface Executor extends java.util.concurrent.Executor {
 	 *
 	 * @see  Executors#wrap(java.lang.Runnable)
 	 *
-	 * @exception  DisposedException  if already disposed.
+	 * @exception  IllegalStateException  if already closed.
 	 */
-	<T> Future<T> submit(Runnable task, T result) throws DisposedException;
+	<T> Future<T> submit(Runnable task, T result) throws IllegalStateException;
 
 	/**
 	 * Submits to the executor.
 	 *
 	 * @see  Executors#wrap(java.lang.Runnable)
 	 *
-	 * @exception  DisposedException  if already disposed.
+	 * @exception  IllegalStateException  if already closed.
 	 */
-	Future<?> submit(Runnable task) throws DisposedException;
+	Future<?> submit(Runnable task) throws IllegalStateException;
 
 	/**
 	 * Runs all of the tasks concurrently, waiting for them to all complete.
@@ -97,9 +96,9 @@ public interface Executor extends java.util.concurrent.Executor {
 	 * 
 	 * @see  Executors#wrap(java.lang.Runnable)
 	 *
-	 * @exception  DisposedException  if already disposed.
+	 * @exception  IllegalStateException  if already closed.
 	 */
-	void runAll(Collection<? extends Runnable> tasks) throws DisposedException, InterruptedException, ExecutionException;
+	void runAll(Collection<? extends Runnable> tasks) throws IllegalStateException, InterruptedException, ExecutionException;
 
 	/**
 	 * Submits to the executor after the provided delay,
@@ -107,16 +106,16 @@ public interface Executor extends java.util.concurrent.Executor {
 	 * 
 	 * @see  Executors#wrap(java.lang.Runnable)
 	 *
-	 * @exception  DisposedException  if already disposed.
+	 * @exception  IllegalStateException  if already closed.
 	 */
-	<T> Future<T> submit(Runnable task, T result, long delay) throws DisposedException;
+	<T> Future<T> submit(Runnable task, T result, long delay) throws IllegalStateException;
 
 	/**
 	 * Submits to the executor after the provided delay.
 	 * 
 	 * @see  Executors#wrap(java.lang.Runnable)
 	 *
-	 * @exception  DisposedException  if already disposed.
+	 * @exception  IllegalStateException  if already closed.
 	 */
-	Future<?> submit(Runnable task, long delay) throws DisposedException;
+	Future<?> submit(Runnable task, long delay) throws IllegalStateException;
 }

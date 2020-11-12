@@ -22,8 +22,7 @@
  */
 package com.aoindustries.concurrent;
 
-import com.aoindustries.lang.Disposable;
-import com.aoindustries.lang.DisposedException;
+import com.aoindustries.lang.AutoCloseableE;
 import com.aoindustries.lang.RuntimeUtils;
 import com.aoindustries.util.concurrent.ThreadLocalCallable;
 import com.aoindustries.util.concurrent.ThreadLocalRunnable;
@@ -60,14 +59,13 @@ import java.util.logging.Logger;
  * Provides a central set of executors for use by any number of projects.
  * These executors use daemon threads and will not keep the JVM alive.
  * The executors are automatically shutdown using shutdown hooks.  The
- * executors are also immediately shutdown when the last instance is disposed.
+ * executors are also immediately shutdown when the last instance is closed.
  * </p>
  * <p>
  * Also allows for delayed execution of tasks using an internal Timer.
  * </p>
  */
-// TODO: Convert from Disposable to AutoCloseable
-public class Executors implements Disposable {
+public class Executors implements AutoCloseableE<RuntimeException> {
 
 	private static final Logger logger = Logger.getLogger(Executors.class.getName());
 
@@ -77,9 +75,9 @@ public class Executors implements Disposable {
 	private static final boolean DAEMON_THREADS = true;
 
 	/**
-	 * The maximum number of nanoseconds that will be waited for during dispose (0.1 seconds).
+	 * The maximum number of nanoseconds that will be waited for during close (0.1 seconds).
 	 */
-	private static final long DISPOSE_WAIT_NANOS = 100L * 1000L * 1000L; // Was one minute: 60L * 1000L * 1000L * 1000L;
+	private static final long CLOSE_WAIT_NANOS = 100L * 1000L * 1000L; // Was one minute: 60L * 1000L * 1000L * 1000L;
 
 	/**
 	 * The number of threads per processor for per-processor executor.
@@ -153,22 +151,22 @@ public class Executors implements Disposable {
 	}
 
 	/**
-	 * Set to true when dispose called.
+	 * Set to true when close called.
 	 */
-	private final AtomicBoolean disposed = new AtomicBoolean();
+	private final AtomicBoolean closed = new AtomicBoolean();
 
 	/**
 	 * <p>
-	 * Create a new instance of the executor service.  <code>dispose()</code> must be called
-	 * when done with the instance.  This should be done in a try-finally or strong
+	 * Create a new instance of the executor service.  {@link #close()} must be called
+	 * when done with the instance.  This should be done in a try-with-resources, try-finally, or strong
 	 * equivalent, such as <code>Servlet.destroy()</code>.
 	 * </p>
 	 * <p>
 	 * Internally, threads are shared between executor instances.  The threads are only
-	 * shutdown when the last executor is disposed.
+	 * shutdown when the last executor is closed.
 	 * </p>
 	 *
-	 * @see  #dispose()
+	 * @see  #close()
 	 */
 	public Executors() {
 		int availableProcessors = RuntimeUtils.getAvailableProcessors();
@@ -192,7 +190,7 @@ public class Executors implements Disposable {
 	/**
 	 * <p>
 	 * Gets the preferred concurrency for this executor.  Does not change for the life
-	 * of the executor, but will be updated should the last executor be disposed
+	 * of the executor, but will be updated should the last executor be closed
 	 * and another created.
 	 * </p>
 	 * <p>
@@ -219,8 +217,8 @@ public class Executors implements Disposable {
 				// Another thread created one, cancel this one
 				t.cancel();
 				t = timer.get();
-				// And now another thread disposed it (crazy)
-				if(t == null) throw new DisposedException();
+				// And now another thread closed it (crazy)
+				if(t == null) throw new IllegalStateException();
 			}
 		}
 		return t;
@@ -242,7 +240,7 @@ public class Executors implements Disposable {
 
 	/**
 	 * Keeps track of all tasks scheduled but not yet completed by this executor so the tasks
-	 * may be completed or canceled during dispose.
+	 * may be completed or canceled during close.
 	 */
 	private static final AtomicLong nextIncompleteFutureId = new AtomicLong(1);
 	private static final ConcurrentMap<Long,ThreadFactoryFuture<?>> incompleteFutures = new ConcurrentHashMap<Long,ThreadFactoryFuture<?>>();
@@ -700,8 +698,8 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public <T> Future<T> submit(Callable<? extends T> task) throws DisposedException {
-			if(executors.disposed.get()) throw new DisposedException();
+		public <T> Future<T> submit(Callable<? extends T> task) throws IllegalStateException {
+			if(executors.closed.get()) throw new IllegalStateException();
 			return incompleteFutureSubmit(
 				getThreadFactory(),
 				getExecutorService(),
@@ -711,8 +709,8 @@ public class Executors implements Disposable {
 
 		@Override
 		@SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
-		public <T> List<T> callAll(Collection<? extends Callable<? extends T>> tasks) throws DisposedException, InterruptedException, ExecutionException {
-			if(executors.disposed.get()) throw new DisposedException();
+		public <T> List<T> callAll(Collection<? extends Callable<? extends T>> tasks) throws IllegalStateException, InterruptedException, ExecutionException {
+			if(executors.closed.get()) throw new IllegalStateException();
 			int size = tasks.size();
 			if(size == 0) {
 				return Collections.emptyList();
@@ -759,8 +757,8 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public <T> Future<T> submit(Callable<? extends T> task, long delay) throws DisposedException {
-			if(executors.disposed.get()) throw new DisposedException();
+		public <T> Future<T> submit(Callable<? extends T> task, long delay) throws IllegalStateException {
+			if(executors.closed.get()) throw new IllegalStateException();
 			return incompleteFutureSubmit(
 				getThreadFactory(),
 				getExecutorService(),
@@ -770,8 +768,8 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public <T> Future<T> submit(Runnable task, T result) throws DisposedException {
-			if(executors.disposed.get()) throw new DisposedException();
+		public <T> Future<T> submit(Runnable task, T result) throws IllegalStateException {
+			if(executors.closed.get()) throw new IllegalStateException();
 			return incompleteFutureSubmit(
 				getThreadFactory(),
 				getExecutorService(),
@@ -781,13 +779,13 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public Future<?> submit(Runnable task) throws DisposedException {
+		public Future<?> submit(Runnable task) throws IllegalStateException {
 			return submit(task, null);
 		}
 
 		@Override
-		public void runAll(Collection<? extends Runnable> tasks) throws DisposedException, InterruptedException, ExecutionException {
-			if(executors.disposed.get()) throw new DisposedException();
+		public void runAll(Collection<? extends Runnable> tasks) throws IllegalStateException, InterruptedException, ExecutionException {
+			if(executors.closed.get()) throw new IllegalStateException();
 			int size = tasks.size();
 			if(size == 0) {
 				// Nothing to do
@@ -831,8 +829,8 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public <T> Future<T> submit(Runnable task, T result, long delay) throws DisposedException {
-			if(executors.disposed.get()) throw new DisposedException();
+		public <T> Future<T> submit(Runnable task, T result, long delay) throws IllegalStateException {
+			if(executors.closed.get()) throw new IllegalStateException();
 			return incompleteFutureSubmit(
 				getThreadFactory(),
 				getExecutorService(),
@@ -843,7 +841,7 @@ public class Executors implements Disposable {
 		}
 
 		@Override
-		public Future<?> submit(Runnable task, long delay) throws DisposedException {
+		public Future<?> submit(Runnable task, long delay) throws IllegalStateException {
 			return submit(task, null, delay);
 		}
 	}
@@ -860,7 +858,7 @@ public class Executors implements Disposable {
 			Thread.NORM_PRIORITY
 		);
 
-		private static void dispose() {
+		private static void close() {
 			final ExecutorServiceWrapper ues = unboundedExecutorService.getAndSet(null);
 			if(ues != null) {
 				Runnable uesShutdown = () -> {
@@ -871,7 +869,7 @@ public class Executors implements Disposable {
 					}
 					try {
 						if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "awaiting termination of unboundedExecutorService");
-						if(ues.executorService.awaitTermination(DISPOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
+						if(ues.executorService.awaitTermination(CLOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
 							ues.removeShutdownHook();
 						}
 					} catch(InterruptedException e) {
@@ -914,8 +912,8 @@ public class Executors implements Disposable {
 					ues.executorService.shutdown();
 					ues.removeShutdownHook();
 					ues = unboundedExecutorService.get();
-					// And now another thread disposed it (crazy)
-					if(ues == null) throw new DisposedException();
+					// And now another thread closed it (crazy)
+					if(ues == null) throw new IllegalStateException();
 				}
 			}
 			return ues;
@@ -1006,7 +1004,7 @@ public class Executors implements Disposable {
 		private static final PerProcessorExecutorServicesLock perProcessorExecutorServicesLock = new PerProcessorExecutorServicesLock();
 		private static final List<ExecutorServiceWrapper> perProcessorExecutorServices = new ArrayList<ExecutorServiceWrapper>();
 
-		private static void dispose() {
+		private static void close() {
 			synchronized(perProcessorExecutorServicesLock) {
 				// Going backwards, to clean up deepest depth tasks first, giving other tasks a chance to finish during cleanup
 				for(int i = perProcessorExecutorServices.size()-1; i >= 0; --i) {
@@ -1021,7 +1019,7 @@ public class Executors implements Disposable {
 							}
 							try {
 								if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "awaiting termination of perProcessorExecutorServices[{0}]", index);
-								if(ppes.executorService.awaitTermination(DISPOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
+								if(ppes.executorService.awaitTermination(CLOSE_WAIT_NANOS, TimeUnit.NANOSECONDS)) {
 									ppes.removeShutdownHook();
 								}
 							} catch(InterruptedException e) {
@@ -1383,33 +1381,33 @@ public class Executors implements Disposable {
 	}
 	// </editor-fold>
 
-	// <editor-fold defaultstate="collapsed" desc="Dispose">
+	// <editor-fold defaultstate="collapsed" desc="AutoCloseable">
 	/**
 	 * <p>
-	 * Disposes of this executor service instance.  Once disposed, no additional
-	 * tasks may be submitted.  Any overriding method must call super.dispose().
+	 * Closes this executor service instance.  Once closed, no additional
+	 * tasks may be submitted.  Any overriding method must call super.close().
 	 * </p>
 	 * <p>
 	 * If this is the last active executor, the underlying threads will also be shutdown.
-	 * This shutdown may wait up to <code>(1 + numPerProcessorPools) * DISPOSE_WAIT_NANOS</code>
+	 * This shutdown may wait up to <code>(1 + numPerProcessorPools) * CLOSE_WAIT_NANOS</code>
 	 * for clean termination of all threads.
 	 * </p>
 	 * <p>
-	 * If already disposed, no action will be taken and no exception thrown.
+	 * If already closed, no action will be taken and no exception thrown.
 	 * </p>
 	 *
-	 * @see  #DISPOSE_WAIT_NANOS
+	 * @see  #CLOSE_WAIT_NANOS
 	 */
 	@Override
-	public void dispose() {
-		boolean alreadyDisposed = disposed.getAndSet(true);
-		if(!alreadyDisposed) {
+	public void close() {
+		boolean alreadyClosed = closed.getAndSet(true);
+		if(!alreadyClosed) {
 			assert activeCount.get() > 0;
 			int newActiveCount = activeCount.decrementAndGet();
 			if(logger.isLoggable(Level.FINE)) logger.log(Level.FINE, "activeCount={0}", newActiveCount);
 			if(newActiveCount == 0) {
-				UnboundedExecutor.dispose();
-				PerProcessorExecutor.dispose();
+				UnboundedExecutor.close();
+				PerProcessorExecutor.close();
 				// Stop timer
 				Timer t = timer.getAndSet(null);
 				if(t != null) {
@@ -1423,7 +1421,7 @@ public class Executors implements Disposable {
 				final List<ThreadFactoryFuture<?>> waitFutures = new ArrayList<>(incompleteFutures.values());
 				incompleteFutures.clear();
 				ThreadFactory tf = currentThreadFactory.get();
-				final long waitUntil = System.nanoTime() + DISPOSE_WAIT_NANOS;
+				final long waitUntil = System.nanoTime() + CLOSE_WAIT_NANOS;
 				// Wait for our incomplete tasks to complete.
 				// This is done while not holding privateLock to avoid deadlock.
 				List<ThreadFactoryFuture<?>> ownThreadFactoryWaitFutures = null;
