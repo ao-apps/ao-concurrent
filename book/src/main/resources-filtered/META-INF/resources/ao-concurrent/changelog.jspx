@@ -37,7 +37,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 		shortTitle="Changelog"
 		tocLevels="1"
 		datePublished="2016-10-29T17:54:36-0500"
-		dateModified="2020-11-11T23:48:29-06:00"
+		dateModified="2020-12-28T02:35:29-06:00"
 	>
 		<c:if test="${fn:endsWith('@{project.version}', '-SNAPSHOT') and !fn:endsWith('@{project.version}', '-POST-SNAPSHOT')}">
 			<changelog:release
@@ -51,6 +51,11 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 					<li>
 						Converted from <code>Disposable</code> (deprecated) to <code>AutoCloseable</code>, which
 						supports try-with-resources in Java 1.7+.
+					</li>
+					<li>
+						<code>ConcurrencyLimiter</code> divided into two implementations:
+						<code>KeyedConcurrencyReducer</code> (when limiting by key) and <code>ConcurrencyReducer</code>
+						when is a single reduction.
 					</li>
 				</ul>
 			</changelog:release>
