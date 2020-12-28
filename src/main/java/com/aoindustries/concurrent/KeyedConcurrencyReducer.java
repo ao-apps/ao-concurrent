@@ -79,8 +79,6 @@ public class KeyedConcurrencyReducer<K,R> {
 				try {
 					result = callable.call();
 					throwable = null;
-				} catch(ThreadDeath td) {
-					throw td;
 				} catch(Throwable t) {
 					result = null;
 					throwable = t;
@@ -103,7 +101,13 @@ public class KeyedConcurrencyReducer<K,R> {
 					throwable = resultsCache.throwable;
 				}
 			}
-			if(throwable != null) throw new ExecutionException(resultsCache.throwable);
+			if(throwable != null) {
+				if(isFirstThread && throwable instanceof ThreadDeath) {
+					// Propagate directly back to first thread
+					throw (ThreadDeath)throwable;
+				}
+				throw new ExecutionException(resultsCache.throwable);
+			}
 			return result;
 		} finally {
 			synchronized(executeSerializedStatus) {

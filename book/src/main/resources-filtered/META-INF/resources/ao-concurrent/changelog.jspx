@@ -37,7 +37,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 		shortTitle="Changelog"
 		tocLevels="1"
 		datePublished="2016-10-29T17:54:36-0500"
-		dateModified="2020-12-28T02:35:29-06:00"
+		dateModified="2020-12-28T03:01:45-06:00"
 	>
 		<c:if test="${fn:endsWith('@{project.version}', '-SNAPSHOT') and !fn:endsWith('@{project.version}', '-POST-SNAPSHOT')}">
 			<changelog:release
@@ -56,6 +56,11 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 						<code>ConcurrencyLimiter</code> divided into two implementations:
 						<code>KeyedConcurrencyReducer</code> (when limiting by key) and <code>ConcurrencyReducer</code>
 						when is a single reduction.
+					</li>
+					<li>
+						On <code>ThreadDeath</code> the first thread still gets the actual <code>ThreadDeath</code>,
+						while all waiting threads now get <code>ExecutionException</code>.  Previously, on thread death
+						waiting threads were never notified.
 					</li>
 				</ul>
 			</changelog:release>
