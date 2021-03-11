@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2011, 2012, 2013, 2014, 2015, 2016, 2019, 2020  AO Industries, Inc.
+ * Copyright (C) 2011, 2012, 2013, 2014, 2015, 2016, 2019, 2020, 2021  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -242,7 +242,7 @@ public class Executors implements AutoCloseable {
 	 * may be completed or canceled during close.
 	 */
 	private static final AtomicLong nextIncompleteFutureId = new AtomicLong(1);
-	private static final ConcurrentMap<Long,ThreadFactoryFuture<?>> incompleteFutures = new ConcurrentHashMap<Long,ThreadFactoryFuture<?>>();
+	private static final ConcurrentMap<Long, ThreadFactoryFuture<?>> incompleteFutures = new ConcurrentHashMap<>();
 
 	private static class IncompleteFuture<V> implements ThreadFactoryFuture<V> {
 

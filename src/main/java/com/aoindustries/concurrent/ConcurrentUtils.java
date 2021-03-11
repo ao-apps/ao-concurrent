@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2013, 2015, 2016, 2020  AO Industries, Inc.
+ * Copyright (C) 2013, 2015, 2016, 2020, 2021  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -64,7 +64,7 @@ final public class ConcurrentUtils {
 	 *
 	 * @return  the collection that was given
 	 */
-	public static <E,C extends Collection<E>> C getAll(Iterable<? extends Future<? extends E>> futures, C output) throws InterruptedException, ExecutionException {
+	public static <E, C extends Collection<E>> C getAll(Iterable<? extends Future<? extends E>> futures, C output) throws InterruptedException, ExecutionException {
 		for(Future<? extends E> future : futures) {
 			output.add(future.get());
 		}
@@ -75,7 +75,7 @@ final public class ConcurrentUtils {
 	 * Gets all of the results of the futures, returning a modifiable map of the results.
 	 * The map will maintain the iteration order of the source.
 	 */
-	public static <K,V> Map<K,V> getAll(Map<? extends K,? extends Future<? extends V>> futures) throws InterruptedException, ExecutionException {
+	public static <K, V> Map<K, V> getAll(Map<? extends K, ? extends Future<? extends V>> futures) throws InterruptedException, ExecutionException {
 		return getAll(futures, AoCollections.newLinkedHashMap(futures.size()));
 	}
 
@@ -84,8 +84,8 @@ final public class ConcurrentUtils {
 	 *
 	 * @return  the map that was given
 	 */
-	public static <K,V,M extends Map<K,V>> M getAll(Map<? extends K,? extends Future<? extends V>> futures, M output) throws InterruptedException, ExecutionException {
-		for(Map.Entry<? extends K,? extends Future<? extends V>> entry : futures.entrySet()) {
+	public static <K, V, M extends Map<K, V>> M getAll(Map<? extends K, ? extends Future<? extends V>> futures, M output) throws InterruptedException, ExecutionException {
+		for(Map.Entry<? extends K, ? extends Future<? extends V>> entry : futures.entrySet()) {
 			output.put(entry.getKey(), entry.getValue().get());
 		}
 		return output;

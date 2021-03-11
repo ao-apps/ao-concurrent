@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2014, 2015, 2019, 2020  AO Industries, Inc.
+ * Copyright (C) 2014, 2015, 2019, 2020, 2021  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -53,9 +53,9 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 	}
 
 	private static class EventCall<L> {
-		final Map<L,Boolean> unfinishedCalls;
+		final Map<L, Boolean> unfinishedCalls;
 		final Runnable call;
-		EventCall(Map<L,Boolean> unfinishedCalls, Runnable call) {
+		EventCall(Map<L, Boolean> unfinishedCalls, Runnable call) {
 			this.unfinishedCalls = unfinishedCalls;
 			this.call = call;
 		}
@@ -163,7 +163,7 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 	 * A queue of events per listener.  When the queue is null, no executor is running for the listener.
 	 * When the queue is non-null, even when empty, an executor is running for the listener.
 	 */
-	private final Map<L,Queue<EventCall<L>>> listeners = new IdentityHashMap<>();
+	private final Map<L, Queue<EventCall<L>>> listeners = new IdentityHashMap<>();
 
 	private final Executors executor = new Executors();
 
@@ -220,8 +220,8 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 		synchronized(listeners) {
 			// The future is not finished until all individual calls have removed themselves from this map
 			// and this map is empty.
-			final Map<L,Boolean> unfinishedCalls = AoCollections.newIdentityHashMap(listeners.size());
-			for(Map.Entry<L,Queue<EventCall<L>>> entry : listeners.entrySet()) {
+			final Map<L, Boolean> unfinishedCalls = AoCollections.newIdentityHashMap(listeners.size());
+			for(Map.Entry<L, Queue<EventCall<L>>> entry : listeners.entrySet()) {
 				final L listener = entry.getKey();
 				final Runnable call = event.createCall(listener);
 				Queue<EventCall<L>> queue = entry.getValue();

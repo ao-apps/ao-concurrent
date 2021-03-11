@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2013, 2015, 2016, 2019, 2020  AO Industries, Inc.
+ * Copyright (C) 2013, 2015, 2016, 2019, 2020, 2021  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -33,9 +33,9 @@ import java.util.concurrent.ExecutionException;
  * When a second thread tries to access the same resource as a previous thread,
  * it will share the results that are obtained by the previous thread.
  */
-public class KeyedConcurrencyReducer<K,R> {
+public class KeyedConcurrencyReducer<K, R> {
 
-	private final Map<K,ResultsCache<R>> executeSerializedStatus = new HashMap<>();
+	private final Map<K, ResultsCache<R>> executeSerializedStatus = new HashMap<>();
 
 	/**
 	 * <p>

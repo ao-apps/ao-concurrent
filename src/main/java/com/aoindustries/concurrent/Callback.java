@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2014, 2015, 2019, 2020  AO Industries, Inc.
+ * Copyright (C) 2014, 2015, 2019, 2020, 2021  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -28,6 +28,6 @@ package com.aoindustries.concurrent;
 @FunctionalInterface
 public interface Callback<R> {
 
-	// TODO: Allow all Throwable, or make a generic parent interface CallbackE<R,E>, that this extends as <R,RuntimeException>
+	// TODO: Allow all Throwable, or make a generic parent interface CallbackE<R, E>, that this extends as <R, RuntimeException>
 	void call(R result);
 }
