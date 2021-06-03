@@ -22,7 +22,7 @@ You should have received a copy of the GNU Lesser General Public License
 along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 -->
 <jsp:root
-	xmlns:ao="https://aoindustries.com/ao-taglib/"
+	xmlns:ao="https://oss.aoapps.com/taglib/"
 	xmlns:c="http://java.sun.com/jsp/jstl/core"
 	xmlns:changelog="https://semanticcms.com/changelog/taglib/"
 	xmlns:core="https://semanticcms.com/core/taglib/"
@@ -37,7 +37,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 		shortTitle="Changelog"
 		tocLevels="1"
 		datePublished="2016-10-29T17:54:36-05:00"
-		dateModified="2021-05-25T18:54:28-05:00"
+		dateModified="2021-05-31T01:04:26-05:00"
 	>
 		<c:if test="${fn:endsWith('@{project.version}', '-SNAPSHOT') and !fn:endsWith('@{project.version}', '-POST-SNAPSHOT')}">
 			<changelog:release
@@ -45,10 +45,11 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 				version="@{project.version}"
 				groupId="@{project.groupId}"
 				artifactId="@{documented.artifactId}"
+				repository="https://s01.oss.sonatype.org/content/repositories/snapshots/"
 				scmUrl="@{project.scm.url}"
 			>
 				<ul>
-					<li>Updated dependencies.</li>
+					<li>Maven artifact relocated from <code>com.aoindustries:ao-concurrent</code> to <code>com.aoapps:ao-concurrent</code>.</li>
 				</ul>
 			</changelog:release>
 		</c:if>
@@ -57,7 +58,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="3.1.0"
 			datePublished="2020-12-28T05:52:05-06:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
@@ -79,7 +80,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="3.0.0"
 			datePublished="2020-11-17T22:11:21-06:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
@@ -95,7 +96,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="2.0.1"
 			datePublished="2020-03-28T00:15:42-05:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
@@ -114,7 +115,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="2.0.0"
 			datePublished="2020-03-27T01:28:23-05:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
@@ -127,7 +128,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 				<li>
 					Renamed package from <code>com.aoindustries.util.concurrent</code> to
 					<code>com.aoindustries.concurrent</code>.  Resolves split-package with
-					<core:link book="/ao-lang" page="/index.jspx" />.
+					<core:link book="/lang" page="/index.jspx" />.
 				</li>
 			</ul>
 		</changelog:release>
@@ -136,7 +137,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="1.1.2"
 			datePublished="2019-06-29T19:48:55-05:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
@@ -145,7 +146,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 					<p>
 						Using <code>;-split-package:=first</code> of <ao:a href="http://felix.apache.org/documentation/subprojects/apache-felix-maven-bundle-plugin-bnd.html">maven-bundle-plugin</ao:a>
 						to avoid bundling the classes in the split-package <code>com.aoindustries.util.concurrent</code> from
-						<core:link book="/ao-lang" page="/index.jspx" />.
+						<core:link book="/lang" page="/index.jspx" />.
 					</p>
 					<p>
 						This split-package is transitional.  In the future we will have more fine-grained <code>*-i18n</code> projects.
@@ -158,7 +159,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="1.1.1"
 			datePublished="2019-06-19T09:01:26-05:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
@@ -176,7 +177,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="1.1.0"
 			datePublished="2019-04-24T01:36:59-05:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
@@ -189,7 +190,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="1.0.3"
 			datePublished="2017-07-19T22:49:26-05:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
@@ -202,12 +203,12 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="1.0.2"
 			datePublished="2016-11-15T17:38:45-06:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
 			<ul>
-				<li>New <core:link book="/ao-oss-parent" page="/index.jspx" /> POM to simplify <code>pom.xml</code> files.</li>
+				<li>New <core:link book="/parent" page="/index.jspx" /> POM to simplify <code>pom.xml</code> files.</li>
 				<li>Project documentation moved to per-project book in <ao:a href="https://semanticcms.com/">SemanticCMS</ao:a> format.</li>
 				<li>Added changelog as top-level project link.</li>
 			</ul>
@@ -217,7 +218,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="1.0.1"
 			datePublished="2016-10-20T18:07:00-05:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
@@ -232,7 +233,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			projectName="@{documented.name}"
 			version="1.0.0"
 			datePublished="2016-10-04T19:22:00-05:00"
-			groupId="@{project.groupId}"
+			groupId="com.aoindustries"
 			artifactId="@{documented.artifactId}"
 			scmUrl="@{project.scm.url}"
 		>
