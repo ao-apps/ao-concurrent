@@ -37,7 +37,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 		shortTitle="Changelog"
 		tocLevels="1"
 		datePublished="2016-10-29T17:54:36-05:00"
-		dateModified="2021-05-31T01:04:26-05:00"
+		dateModified="2021-06-03T22:53:21-05:00"
 	>
 		<c:if test="${fn:endsWith('@{project.version}', '-SNAPSHOT') and !fn:endsWith('@{project.version}', '-POST-SNAPSHOT')}">
 			<changelog:release
@@ -50,6 +50,7 @@ along with ao-concurrent.  If not, see <http://www.gnu.org/licenses />.
 			>
 				<ul>
 					<li>Maven artifact relocated from <code>com.aoindustries:ao-concurrent</code> to <code>com.aoapps:ao-concurrent</code>.</li>
+					<li>Package renamed from <code>com.aoindustries.concurrent</code> to <code>com.aoapps.concurrent</code>.</li>
 				</ul>
 			</changelog:release>
 		</c:if>

@@ -20,9 +20,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with ao-concurrent.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.aoindustries.concurrent;
+package com.aoapps.concurrent;
 
-import com.aoindustries.collections.AoCollections;
+import com.aoapps.collections.AoCollections;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;

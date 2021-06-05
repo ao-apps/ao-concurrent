@@ -20,13 +20,13 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with ao-concurrent.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.aoindustries.concurrent;
+package com.aoapps.concurrent;
 
-import com.aoindustries.lang.RuntimeUtils;
-import com.aoindustries.util.concurrent.ThreadLocalCallable;
-import com.aoindustries.util.concurrent.ThreadLocalRunnable;
-import com.aoindustries.util.i18n.I18nThreadLocalCallable;
-import com.aoindustries.util.i18n.I18nThreadLocalRunnable;
+import com.aoapps.hodgepodge.i18n.I18nThreadLocalCallable;
+import com.aoapps.hodgepodge.i18n.I18nThreadLocalRunnable;
+import com.aoapps.lang.RuntimeUtils;
+import com.aoapps.lang.concurrent.ThreadLocalCallable;
+import com.aoapps.lang.concurrent.ThreadLocalRunnable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;

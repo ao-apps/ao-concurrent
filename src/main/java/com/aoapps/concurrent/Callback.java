@@ -20,7 +20,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with ao-concurrent.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.aoindustries.concurrent;
+package com.aoapps.concurrent;
 
 /**
  * A callback that can be registered for asynchronous operation results.
