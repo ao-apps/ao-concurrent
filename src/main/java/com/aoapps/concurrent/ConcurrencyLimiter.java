@@ -30,6 +30,6 @@ package com.aoapps.concurrent;
  * @deprecated  Please use either {@link KeyedConcurrencyReducer} or {@link ConcurrencyReducer}.
  */
 @Deprecated
-final public class ConcurrencyLimiter<K, R> extends KeyedConcurrencyReducer<K, R> {
+public final class ConcurrencyLimiter<K, R> extends KeyedConcurrencyReducer<K, R> {
 
 }

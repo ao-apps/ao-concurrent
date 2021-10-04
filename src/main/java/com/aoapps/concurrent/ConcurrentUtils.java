@@ -33,7 +33,7 @@ import java.util.concurrent.Future;
 /**
  * Concurrency utilities.
  */
-final public class ConcurrentUtils {
+public final class ConcurrentUtils {
 
 	/**
 	 * Make no instances.

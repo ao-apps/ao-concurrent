@@ -352,7 +352,7 @@ public class Executors implements AutoCloseable {
 		}
 	}
 
-	private static abstract class IncompleteTimerTask<V> extends TimerTask implements ThreadFactoryFuture<V> {
+	private abstract static class IncompleteTimerTask<V> extends TimerTask implements ThreadFactoryFuture<V> {
 
 		protected final ThreadFactory threadFactory;
 		protected final SimpleExecutorService executorService;
@@ -654,7 +654,7 @@ public class Executors implements AutoCloseable {
 	// </editor-fold>
 
 	// <editor-fold defaultstate="collapsed" desc="Executor">
-	private static abstract class ExecutorImpl implements Executor {
+	private abstract static class ExecutorImpl implements Executor {
 
 		/**
 		 * Using private field in static inner class to have more control over where implicit "this" would have been used.
