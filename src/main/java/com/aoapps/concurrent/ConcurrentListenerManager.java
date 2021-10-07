@@ -276,7 +276,7 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 									Boolean removedValue = eventCall.unfinishedCalls.remove(listener);
 									// Notify when the last call completes
 									if(eventCall.unfinishedCalls.isEmpty()) {
-										eventCall.unfinishedCalls.notify();
+										eventCall.unfinishedCalls.notifyAll();
 									}
 									if(removedValue == null) throw new AssertionError();
 								}
