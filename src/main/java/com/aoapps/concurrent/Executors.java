@@ -1126,7 +1126,7 @@ public class Executors implements AutoCloseable {
 	 * If a thread blocks or deadlocks, it can starve the system entirely - use this
 	 * cautiously.  For example, do not use it for things like disk I/O or network
 	 * I/O (including writes - they can block, too, once the network buffers are
-	 * full). 
+	 * full).
 	 * </p>
 	 * <p>
 	 * When a task is submitted by a thread that is already part of a per-processor executor,
@@ -1257,7 +1257,7 @@ public class Executors implements AutoCloseable {
 					}
 				}
 				try {
-					return unboundedExecutor.submit(() -> SequentialFuture.this.get()).get(
+					return unboundedExecutor.submit((Callable<V>)SequentialFuture.this::get).get(
 						timeout,
 						unit
 					);
