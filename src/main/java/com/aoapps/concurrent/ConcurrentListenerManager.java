@@ -64,37 +64,37 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 	/**
 	 * The object instance used to indicate that a listener is called synchronously.
 	 */
-	private final Queue<EventCall<L>> SYNC_DO_NOT_QUEUE = new Queue<EventCall<L>>() {
+	private static final Queue<EventCall<Object>> SYNC_DO_NOT_QUEUE = new Queue<EventCall<Object>>() {
 
 		private static final String MESSAGE = "This queue is a synchronous marker and none of its method should be called.";
 
 		@Override
-		public boolean add(EventCall<L> e) {
+		public boolean add(EventCall<Object> e) {
 			throw new AssertionError(MESSAGE);
 		}
 
 		@Override
-		public boolean offer(EventCall<L> e) {
+		public boolean offer(EventCall<Object> e) {
 			throw new AssertionError(MESSAGE);
 		}
 
 		@Override
-		public EventCall<L> remove() {
+		public EventCall<Object> remove() {
 			throw new AssertionError(MESSAGE);
 		}
 
 		@Override
-		public EventCall<L> poll() {
+		public EventCall<Object> poll() {
 			throw new AssertionError(MESSAGE);
 		}
 
 		@Override
-		public EventCall<L> element() {
+		public EventCall<Object> element() {
 			throw new AssertionError(MESSAGE);
 		}
 
 		@Override
-		public EventCall<L> peek() {
+		public EventCall<Object> peek() {
 			throw new AssertionError(MESSAGE);
 		}
 
@@ -114,7 +114,7 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 		}
 
 		@Override
-		public Iterator<EventCall<L>> iterator() {
+		public Iterator<EventCall<Object>> iterator() {
 			throw new AssertionError(MESSAGE);
 		}
 
@@ -139,7 +139,7 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 		}
 
 		@Override
-		public boolean addAll(Collection<? extends EventCall<L>> c) {
+		public boolean addAll(Collection<? extends EventCall<Object>> c) {
 			throw new AssertionError(MESSAGE);
 		}
 
@@ -188,10 +188,11 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 	 *
 	 * @throws IllegalStateException  If the listener has already been added
 	 */
+	@SuppressWarnings("unchecked")
 	public void addListener(L listener, boolean synchronous) throws IllegalStateException {
 		synchronized(listeners) {
 			if(listeners.containsKey(listener)) throw new IllegalStateException("listener already added");
-			listeners.put(listener, synchronous ? SYNC_DO_NOT_QUEUE : null);
+			listeners.put(listener, synchronous ? (Queue)SYNC_DO_NOT_QUEUE : null);
 		}
 	}
 
@@ -225,7 +226,7 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 				final L listener = entry.getKey();
 				final Runnable call = event.createCall(listener);
 				Queue<EventCall<L>> queue = entry.getValue();
-				if(queue == SYNC_DO_NOT_QUEUE) {
+				if(queue == (Queue)SYNC_DO_NOT_QUEUE) {
 					// Call synchronous listeners immediately
 					try {
 						call.run();
