@@ -1231,8 +1231,8 @@ public class Executors implements AutoCloseable {
 						lock.notifyAll();
 					}
 					return r;
-				} catch(ThreadDeath | InterruptedException td) {
-					throw td;
+				} catch(ThreadDeath | InterruptedException e) {
+					throw e;
 				} catch(Throwable t) {
 					synchronized(lock) {
 						gettingThread = null;
@@ -1450,6 +1450,7 @@ public class Executors implements AutoCloseable {
 								// OK on shutdown
 								// Restore the interrupted status
 								Thread.currentThread().interrupt();
+								break;
 							} catch(TimeoutException e) {
 								// Cancel after timeout
 								//logger.log(Level.WARNING, null, e);
@@ -1462,7 +1463,7 @@ public class Executors implements AutoCloseable {
 						}
 					}
 				}
-				if(ownThreadFactoryWaitFutures != null) {
+				if(ownThreadFactoryWaitFutures != null && !Thread.currentThread().isInterrupted()) {
 					final List<ThreadFactoryFuture<?>> waitOnOtherThreads = ownThreadFactoryWaitFutures;
 					// Cancel all from our thread factory on a different thread to avoid deadlock
 					new Thread(() -> {
@@ -1486,6 +1487,7 @@ public class Executors implements AutoCloseable {
 									// OK on shutdown
 									// Restore the interrupted status
 									Thread.currentThread().interrupt();
+									break;
 								} catch(TimeoutException e) {
 									// Cancel after timeout
 									//logger.log(Level.WARNING, null, e);

@@ -92,15 +92,18 @@ public class ExecutorServiceShutdownHook extends Thread {
 				}
 			}
 		} catch(InterruptedException e) {
-			// Force shutdown
-			logger.log(Level.SEVERE, null, e);
 			try {
-				executorService.shutdownNow();
-			} catch(SecurityException e2) {
-				logger.log(Level.WARNING, null, e2);
+				// Force shutdown
+				logger.log(Level.SEVERE, null, e);
+				try {
+					executorService.shutdownNow();
+				} catch(SecurityException e2) {
+					logger.log(Level.WARNING, null, e2);
+				}
+			} finally {
+				// Restore the interrupted status
+				Thread.currentThread().interrupt();
 			}
-			// Restore the interrupted status
-			Thread.currentThread().interrupt();
 		}
 	}
 }
