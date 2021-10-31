@@ -95,7 +95,7 @@ public class Executors implements AutoCloseable {
 	 * it's factory.
 	 * This threadLocal is not passed from thread to sub tasks.
 	 */
-	private static final ThreadLocal<ThreadFactory> currentThreadFactory = new ThreadLocal<ThreadFactory>();
+	private static final ThreadLocal<ThreadFactory> currentThreadFactory = new ThreadLocal<>();
 
 	/*
 	 * The thread factories are created once so each thread gets a unique
@@ -964,7 +964,7 @@ public class Executors implements AutoCloseable {
 		 * happen when an unbounded task is added from a per-processor thread.
 		 * </p>
 		 */
-		private static final ThreadLocal<Integer> currentThreadPerProcessorIndex = new ThreadLocal<Integer>();
+		private static final ThreadLocal<Integer> currentThreadPerProcessorIndex = new ThreadLocal<>();
 
 		private static final List<PrefixThreadFactory> threadFactories = new CopyOnWriteArrayList<PrefixThreadFactory>();
 
