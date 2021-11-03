@@ -287,6 +287,7 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 				}
 			}
 			// This future will wait until unfinishedCalls is empty
+			// Java 9: new Future<>
 			return new Future<Object>() {
 				@Override
 				public boolean cancel(boolean mayInterruptIfRunning) {

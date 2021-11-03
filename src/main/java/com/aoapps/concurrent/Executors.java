@@ -202,7 +202,7 @@ public class Executors implements AutoCloseable {
 	// </editor-fold>
 
 	// <editor-fold defaultstate="collapsed" desc="Timer">
-	private static final AtomicReference<Timer> timer = new AtomicReference<Timer>();
+	private static final AtomicReference<Timer> timer = new AtomicReference<>();
 
 	/**
 	 * Gets the timer.  activeCount must be greater than zero.
@@ -726,7 +726,7 @@ public class Executors implements AutoCloseable {
 				if(tasks instanceof List) {
 					taskList = (List<? extends Callable<? extends T>>)tasks;
 				} else {
-					taskList = new ArrayList<Callable<? extends T>>(tasks);
+					taskList = new ArrayList<>(tasks);
 				}
 				List<Future<T>> futures = new ArrayList<>(size - 1); // Last one called by current thread
 				List<T> results = new ArrayList<>(size);
@@ -801,7 +801,7 @@ public class Executors implements AutoCloseable {
 				if(tasks instanceof List) {
 					taskList = (List<? extends Runnable>)tasks;
 				} else {
-					taskList = new ArrayList<Runnable>(tasks);
+					taskList = new ArrayList<>(tasks);
 				}
 				List<Future<?>> futures = new ArrayList<>(size - 1); // Last one ran by current thread
 				for(int i=0; i<size; i++) {
@@ -848,7 +848,7 @@ public class Executors implements AutoCloseable {
 
 	// <editor-fold defaultstate="collapsed" desc="Unbounded">
 	private static class UnboundedExecutor extends ExecutorImpl {
-		private static final AtomicReference<ExecutorServiceWrapper> unboundedExecutorService = new AtomicReference<ExecutorServiceWrapper>();
+		private static final AtomicReference<ExecutorServiceWrapper> unboundedExecutorService = new AtomicReference<>();
 
 		private static final String THREAD_FACTORY_NAME_PREFIX = Executors.class.getName()+".unbounded-thread-";
 
@@ -966,7 +966,7 @@ public class Executors implements AutoCloseable {
 		 */
 		private static final ThreadLocal<Integer> currentThreadPerProcessorIndex = new ThreadLocal<>();
 
-		private static final List<PrefixThreadFactory> threadFactories = new CopyOnWriteArrayList<PrefixThreadFactory>();
+		private static final List<PrefixThreadFactory> threadFactories = new CopyOnWriteArrayList<>();
 
 		private static PrefixThreadFactory getThreadFactory(int index) {
 			PrefixThreadFactory perProcessorThreadFactory;
@@ -1001,7 +1001,7 @@ public class Executors implements AutoCloseable {
 
 		private static class PerProcessorExecutorServicesLock {}
 		private static final PerProcessorExecutorServicesLock perProcessorExecutorServicesLock = new PerProcessorExecutorServicesLock();
-		private static final List<ExecutorServiceWrapper> perProcessorExecutorServices = new ArrayList<ExecutorServiceWrapper>();
+		private static final List<ExecutorServiceWrapper> perProcessorExecutorServices = new ArrayList<>();
 
 		private static void close() {
 			synchronized(perProcessorExecutorServicesLock) {
@@ -1285,7 +1285,7 @@ public class Executors implements AutoCloseable {
 			command.run();
 		}
 
-		private static final ThreadFactory sequentialThreadFactory = (Runnable r) -> {
+		private static final ThreadFactory sequentialThreadFactory = r -> {
 			throw new IllegalStateException("No threads should be created by the sequential executor");
 		};
 
