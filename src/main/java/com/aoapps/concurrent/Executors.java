@@ -933,7 +933,7 @@ public class Executors implements AutoCloseable {
 		protected Runnable wrap(Runnable task) {
 			return super.wrap(new ThreadLocalRunnable(task, PerProcessorExecutor.currentThreadPerProcessorIndex));
 		}
-	};
+	}
 
 	private final UnboundedExecutor unbounded = new UnboundedExecutor(this);
 
@@ -1112,7 +1112,7 @@ public class Executors implements AutoCloseable {
 				return perProcessorExecutorService;
 			}
 		}
-	};
+	}
 
 	private final PerProcessorExecutor perProcessor;
 
@@ -1355,7 +1355,7 @@ public class Executors implements AutoCloseable {
 				throw new ExecutionException(t);
 			}
 		}
-	};
+	}
 
 	private final SequentialExecutor sequential = new SequentialExecutor(this);
 
