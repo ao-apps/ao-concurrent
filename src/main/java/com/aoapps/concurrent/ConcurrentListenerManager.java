@@ -167,9 +167,6 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 
 	private final Executors executor = new Executors();
 
-	public ConcurrentListenerManager() {
-	}
-
 	/**
 	 * When no longer needed, close should be called to free resources.
 	 */

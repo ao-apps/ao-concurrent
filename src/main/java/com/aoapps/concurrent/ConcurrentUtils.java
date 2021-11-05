@@ -33,16 +33,14 @@ import java.util.concurrent.Future;
 /**
  * Concurrency utilities.
  */
-public final class ConcurrentUtils {
+public abstract class ConcurrentUtils {
 
-	/**
-	 * Make no instances.
-	 */
-	private ConcurrentUtils() {}
+	/** Make no instances. */
+	private ConcurrentUtils() {throw new AssertionError();}
 
 	/**
 	 * Waits for all futures to complete, discarding any results.
-	 * 
+	 *
 	 * Note: This method is cloned to IntegerRadixSort.java to avoid package dependency.
 	 */
 	public static void waitForAll(Iterable<? extends Future<?>> futures) throws InterruptedException, ExecutionException {

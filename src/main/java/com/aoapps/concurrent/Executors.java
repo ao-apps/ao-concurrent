@@ -357,7 +357,7 @@ public class Executors implements AutoCloseable {
 		protected final ThreadFactory threadFactory;
 		protected final SimpleExecutorService executorService;
 		protected final Long incompleteFutureId;
-		private static class IncompleteLock {}
+		private static class IncompleteLock {/* Empty lock class to help heap profile */}
 		private final IncompleteLock incompleteLock = new IncompleteLock();
 		private boolean canceled = false;
 		private IncompleteFuture<V> future; // Only available once submitted
@@ -999,7 +999,7 @@ public class Executors implements AutoCloseable {
 			return perProcessorThreadFactory;
 		}
 
-		private static class PerProcessorExecutorServicesLock {}
+		private static class PerProcessorExecutorServicesLock {/* Empty lock class to help heap profile */}
 		private static final PerProcessorExecutorServicesLock perProcessorExecutorServicesLock = new PerProcessorExecutorServicesLock();
 		private static final List<ExecutorServiceWrapper> perProcessorExecutorServices = new ArrayList<>();
 
@@ -1154,7 +1154,7 @@ public class Executors implements AutoCloseable {
 
 		private static class SequentialFuture<V> implements Future<V> {
 
-			private static class Lock {}
+			private static class Lock {/* Empty lock class to help heap profile */}
 			private final Lock lock = new Lock();
 			private final Callable<V> task;
 			private final UnboundedExecutor unboundedExecutor;
