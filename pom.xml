@@ -29,7 +29,7 @@ along with ao-concurrent.  If not, see <https://www.gnu.org/licenses/>.
 		<relativePath>../parent/pom.xml</relativePath>
 	</parent>
 
-	<groupId>com.aoapps</groupId><artifactId>ao-concurrent</artifactId><version>4.0.2</version>
+	<groupId>com.aoapps</groupId><artifactId>ao-concurrent</artifactId><version>4.0.2-POST-SNAPSHOT</version>
 	<packaging>bundle</packaging>
 
 	<properties>
@@ -85,7 +85,7 @@ along with ao-concurrent.  If not, see <https://www.gnu.org/licenses/>.
 		<connection>scm:git:git://github.com/ao-apps/ao-concurrent.git</connection>
 		<developerConnection>scm:git:git@github.com:ao-apps/ao-concurrent.git</developerConnection>
 		<url>https://github.com/ao-apps/ao-concurrent</url>
-		<tag>ao-concurrent-4.0.2</tag>
+		<tag>HEAD</tag>
 	</scm>
 
 	<issueManagement>
