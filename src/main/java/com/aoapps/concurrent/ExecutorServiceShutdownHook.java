@@ -41,70 +41,70 @@ import java.util.logging.Logger;
  */
 public class ExecutorServiceShutdownHook extends Thread {
 
-	private static final Logger logger = Logger.getLogger(ExecutorServiceShutdownHook.class.getName());
+  private static final Logger logger = Logger.getLogger(ExecutorServiceShutdownHook.class.getName());
 
-	/**
-	 * The default thread name.
-	 */
-	private static final String DEFAULT_THREAD_NAME = ExecutorServiceShutdownHook.class.getName();
+  /**
+   * The default thread name.
+   */
+  private static final String DEFAULT_THREAD_NAME = ExecutorServiceShutdownHook.class.getName();
 
-	/**
-	 * The default amount of time to wait before issuing a forceful shutdown.
-	 */
-	private static final long DEFAULT_SHUTDOWN_TIMEOUT = 5; // Was 60;
-	private static final TimeUnit DEFAULT_SHUTDOWN_TIMEUNIT = TimeUnit.SECONDS;
+  /**
+   * The default amount of time to wait before issuing a forceful shutdown.
+   */
+  private static final long DEFAULT_SHUTDOWN_TIMEOUT = 5; // Was 60;
+  private static final TimeUnit DEFAULT_SHUTDOWN_TIMEUNIT = TimeUnit.SECONDS;
 
-	private final ExecutorService executorService;
-	private final long shutdownTimeout;
-	private final TimeUnit shutdownTimeoutUnit;
+  private final ExecutorService executorService;
+  private final long shutdownTimeout;
+  private final TimeUnit shutdownTimeoutUnit;
 
-	public ExecutorServiceShutdownHook(ExecutorService executorService) {
-		this(executorService, DEFAULT_THREAD_NAME, DEFAULT_SHUTDOWN_TIMEOUT, DEFAULT_SHUTDOWN_TIMEUNIT);
-	}
+  public ExecutorServiceShutdownHook(ExecutorService executorService) {
+    this(executorService, DEFAULT_THREAD_NAME, DEFAULT_SHUTDOWN_TIMEOUT, DEFAULT_SHUTDOWN_TIMEUNIT);
+  }
 
-	public ExecutorServiceShutdownHook(ExecutorService executorService, long shutdownTimeout, TimeUnit shutdownTimeoutUnit) {
-		this(executorService, DEFAULT_THREAD_NAME, shutdownTimeout, shutdownTimeoutUnit);
-	}
+  public ExecutorServiceShutdownHook(ExecutorService executorService, long shutdownTimeout, TimeUnit shutdownTimeoutUnit) {
+    this(executorService, DEFAULT_THREAD_NAME, shutdownTimeout, shutdownTimeoutUnit);
+  }
 
-	public ExecutorServiceShutdownHook(ExecutorService executorService, String threadName) {
-		this(executorService, threadName, DEFAULT_SHUTDOWN_TIMEOUT, DEFAULT_SHUTDOWN_TIMEUNIT);
-	}
+  public ExecutorServiceShutdownHook(ExecutorService executorService, String threadName) {
+    this(executorService, threadName, DEFAULT_SHUTDOWN_TIMEOUT, DEFAULT_SHUTDOWN_TIMEUNIT);
+  }
 
-	public ExecutorServiceShutdownHook(ExecutorService executorService, String threadName, long shutdownTimeout, TimeUnit shutdownTimeoutUnit) {
-		super(threadName);
-		this.executorService = executorService;
-		this.shutdownTimeout = shutdownTimeout;
-		this.shutdownTimeoutUnit = shutdownTimeoutUnit;
-	}
+  public ExecutorServiceShutdownHook(ExecutorService executorService, String threadName, long shutdownTimeout, TimeUnit shutdownTimeoutUnit) {
+    super(threadName);
+    this.executorService = executorService;
+    this.shutdownTimeout = shutdownTimeout;
+    this.shutdownTimeoutUnit = shutdownTimeoutUnit;
+  }
 
-	@Override
-	public void run() {
-		try {
-			executorService.shutdown();
-		} catch(SecurityException e) {
-			logger.log(Level.WARNING, null, e);
-		}
-		try {
-			if(!executorService.awaitTermination(shutdownTimeout, shutdownTimeoutUnit)) {
-				try {
-					executorService.shutdownNow();
-				} catch(SecurityException e) {
-					logger.log(Level.WARNING, null, e);
-				}
-			}
-		} catch(InterruptedException e) {
-			try {
-				// Force shutdown
-				logger.log(Level.SEVERE, null, e);
-				try {
-					executorService.shutdownNow();
-				} catch(SecurityException e2) {
-					logger.log(Level.WARNING, null, e2);
-				}
-			} finally {
-				// Restore the interrupted status
-				Thread.currentThread().interrupt();
-			}
-		}
-	}
+  @Override
+  public void run() {
+    try {
+      executorService.shutdown();
+    } catch (SecurityException e) {
+      logger.log(Level.WARNING, null, e);
+    }
+    try {
+      if (!executorService.awaitTermination(shutdownTimeout, shutdownTimeoutUnit)) {
+        try {
+          executorService.shutdownNow();
+        } catch (SecurityException e) {
+          logger.log(Level.WARNING, null, e);
+        }
+      }
+    } catch (InterruptedException e) {
+      try {
+        // Force shutdown
+        logger.log(Level.SEVERE, null, e);
+        try {
+          executorService.shutdownNow();
+        } catch (SecurityException e2) {
+          logger.log(Level.WARNING, null, e2);
+        }
+      } finally {
+        // Restore the interrupted status
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
 }

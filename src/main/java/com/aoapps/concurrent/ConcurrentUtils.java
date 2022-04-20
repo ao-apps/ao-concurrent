@@ -36,57 +36,59 @@ import java.util.concurrent.Future;
  */
 public final class ConcurrentUtils {
 
-	/** Make no instances. */
-	private ConcurrentUtils() {throw new AssertionError();}
+  /** Make no instances. */
+  private ConcurrentUtils() {
+    throw new AssertionError();
+  }
 
-	/**
-	 * Waits for all futures to complete, discarding any results.
-	 *
-	 * Note: This method is cloned to IntegerRadixSort.java to avoid package dependency.
-	 */
-	public static void waitForAll(Iterable<? extends Future<?>> futures) throws InterruptedException, ExecutionException {
-		for(Future<?> future : futures) {
-			future.get();
-		}
-	}
+  /**
+   * Waits for all futures to complete, discarding any results.
+   *
+   * Note: This method is cloned to IntegerRadixSort.java to avoid package dependency.
+   */
+  public static void waitForAll(Iterable<? extends Future<?>> futures) throws InterruptedException, ExecutionException {
+    for (Future<?> future : futures) {
+      future.get();
+    }
+  }
 
-	/**
-	 * Gets all of the results of the futures, returning a modifiable list of the results.
-	 */
-	public static <E> List<E> getAll(Iterable<? extends Future<? extends E>> futures) throws InterruptedException, ExecutionException {
-		int startSize = (futures instanceof Collection<?>) ? ((Collection<?>)futures).size() : 10;
-		return getAll(futures, new ArrayList<>(startSize));
-	}
+  /**
+   * Gets all of the results of the futures, returning a modifiable list of the results.
+   */
+  public static <E> List<E> getAll(Iterable<? extends Future<? extends E>> futures) throws InterruptedException, ExecutionException {
+    int startSize = (futures instanceof Collection<?>) ? ((Collection<?>)futures).size() : 10;
+    return getAll(futures, new ArrayList<>(startSize));
+  }
 
-	/**
-	 * Gets all of the results of the futures into the provided collection.
-	 *
-	 * @return  the collection that was given
-	 */
-	public static <E, C extends Collection<E>> C getAll(Iterable<? extends Future<? extends E>> futures, C output) throws InterruptedException, ExecutionException {
-		for(Future<? extends E> future : futures) {
-			output.add(future.get());
-		}
-		return output;
-	}
+  /**
+   * Gets all of the results of the futures into the provided collection.
+   *
+   * @return  the collection that was given
+   */
+  public static <E, C extends Collection<E>> C getAll(Iterable<? extends Future<? extends E>> futures, C output) throws InterruptedException, ExecutionException {
+    for (Future<? extends E> future : futures) {
+      output.add(future.get());
+    }
+    return output;
+  }
 
-	/**
-	 * Gets all of the results of the futures, returning a modifiable map of the results.
-	 * The map will maintain the iteration order of the source.
-	 */
-	public static <K, V> Map<K, V> getAll(Map<? extends K, ? extends Future<? extends V>> futures) throws InterruptedException, ExecutionException {
-		return getAll(futures, AoCollections.newLinkedHashMap(futures.size()));
-	}
+  /**
+   * Gets all of the results of the futures, returning a modifiable map of the results.
+   * The map will maintain the iteration order of the source.
+   */
+  public static <K, V> Map<K, V> getAll(Map<? extends K, ? extends Future<? extends V>> futures) throws InterruptedException, ExecutionException {
+    return getAll(futures, AoCollections.newLinkedHashMap(futures.size()));
+  }
 
-	/**
-	 * Gets all of the results of the futures into the provided map.
-	 *
-	 * @return  the map that was given
-	 */
-	public static <K, V, M extends Map<K, V>> M getAll(Map<? extends K, ? extends Future<? extends V>> futures, M output) throws InterruptedException, ExecutionException {
-		for(Map.Entry<? extends K, ? extends Future<? extends V>> entry : futures.entrySet()) {
-			output.put(entry.getKey(), entry.getValue().get());
-		}
-		return output;
-	}
+  /**
+   * Gets all of the results of the futures into the provided map.
+   *
+   * @return  the map that was given
+   */
+  public static <K, V, M extends Map<K, V>> M getAll(Map<? extends K, ? extends Future<? extends V>> futures, M output) throws InterruptedException, ExecutionException {
+    for (Map.Entry<? extends K, ? extends Future<? extends V>> entry : futures.entrySet()) {
+      output.put(entry.getKey(), entry.getValue().get());
+    }
+    return output;
+  }
 }

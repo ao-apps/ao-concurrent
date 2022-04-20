@@ -29,6 +29,6 @@ package com.aoapps.concurrent;
 @FunctionalInterface
 public interface Callback<R> {
 
-	// TODO: Allow all Throwable, or make a generic parent interface CallbackE<R, E>, that this extends as <R, RuntimeException>
-	void call(R result);
+  // TODO: Allow all Throwable, or make a generic parent interface CallbackE<R, E>, that this extends as <R, RuntimeException>
+  void call(R result);
 }

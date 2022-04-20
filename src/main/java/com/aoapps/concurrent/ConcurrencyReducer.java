@@ -33,91 +33,95 @@ import java.util.concurrent.ExecutionException;
  */
 public class ConcurrencyReducer<R> {
 
-	@SuppressWarnings("PackageVisibleField")
-	static class ResultsCache<R> {
-		int threadCount;
-		boolean finished;
-		R result;
-		Throwable throwable;
-	}
+  @SuppressWarnings("PackageVisibleField")
+  static class ResultsCache<R> {
+    int threadCount;
+    boolean finished;
+    R result;
+    Throwable throwable;
+  }
 
-	private final ResultsCache<R> resultsCache = new ResultsCache<>();
+  private final ResultsCache<R> resultsCache = new ResultsCache<>();
 
-	/**
-	 * <p>
-	 * Executes a callable at most once.  If a callable is
-	 * in the process of being executed by a different thread,
-	 * the current thread will wait and use the
-	 * results obtained by the other thread.
-	 * </p>
-	 * <p>
-	 * Consider the following scenario:
-	 * </p>
-	 * <ol>
-	 *   <li>Thread A invokes MySQL: "CHECK TABLE example FAST QUICK"</li>
-	 *   <li>Thread B invokes MySQL: "CHECK TABLE example FAST QUICK" before Thread A has finished</li>
-	 *   <li>Thread B wait for results determined by Thread A</li>
-	 *   <li>Thread A completes, passes results to Thread B</li>
-	 *   <li>Threads A and B both return the results obtained only by Thread A</li>
-	 * </ol>
-	 */
-	@SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
-	public R executeSerialized(Callable<? extends R> callable) throws InterruptedException, ExecutionException {
-		final boolean isFirstThread;
-		synchronized(resultsCache) {
-			isFirstThread = (resultsCache.threadCount == 0);
-			if(resultsCache.threadCount == Integer.MAX_VALUE) throw new IllegalStateException("threadCount == Integer.MAX_VALUE");
-			resultsCache.threadCount++;
-			if(isFirstThread) resultsCache.finished = false;
-		}
-		try {
-			R result;
-			Throwable throwable;
-			if(isFirstThread) {
-				// Invoke outside resultsCache lock, so other threads can wait
-				try {
-					result = callable.call();
-					throwable = null;
-				} catch(Throwable t) {
-					result = null;
-					throwable = t;
-				}
-				synchronized(resultsCache) {
-					assert !resultsCache.finished;
-					resultsCache.result = result;
-					resultsCache.throwable = throwable;
-					resultsCache.finished = true;
-					resultsCache.notifyAll();
-				}
-			} else {
-				synchronized(resultsCache) {
-					// Wait for results from the first thread, including any exception
-					while(!resultsCache.finished) {
-						resultsCache.wait();
-					}
-					assert resultsCache.finished;
-					result = resultsCache.result;
-					throwable = resultsCache.throwable;
-				}
-			}
-			if(throwable != null) {
-				if(isFirstThread && throwable instanceof ThreadDeath) {
-					// Propagate directly back to first thread
-					throw (ThreadDeath)throwable;
-				}
-				throw new ExecutionException(resultsCache.throwable);
-			}
-			return result;
-		} finally {
-			synchronized(resultsCache) {
-				assert resultsCache.threadCount > 0;
-				resultsCache.threadCount--;
-				if(resultsCache.threadCount == 0) {
-					resultsCache.finished = false;
-					resultsCache.result = null;
-					resultsCache.throwable = null;
-				}
-			}
-		}
-	}
+  /**
+   * <p>
+   * Executes a callable at most once.  If a callable is
+   * in the process of being executed by a different thread,
+   * the current thread will wait and use the
+   * results obtained by the other thread.
+   * </p>
+   * <p>
+   * Consider the following scenario:
+   * </p>
+   * <ol>
+   *   <li>Thread A invokes MySQL: "CHECK TABLE example FAST QUICK"</li>
+   *   <li>Thread B invokes MySQL: "CHECK TABLE example FAST QUICK" before Thread A has finished</li>
+   *   <li>Thread B wait for results determined by Thread A</li>
+   *   <li>Thread A completes, passes results to Thread B</li>
+   *   <li>Threads A and B both return the results obtained only by Thread A</li>
+   * </ol>
+   */
+  @SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
+  public R executeSerialized(Callable<? extends R> callable) throws InterruptedException, ExecutionException {
+    final boolean isFirstThread;
+    synchronized (resultsCache) {
+      isFirstThread = (resultsCache.threadCount == 0);
+      if (resultsCache.threadCount == Integer.MAX_VALUE) {
+        throw new IllegalStateException("threadCount == Integer.MAX_VALUE");
+      }
+      resultsCache.threadCount++;
+      if (isFirstThread) {
+        resultsCache.finished = false;
+      }
+    }
+    try {
+      R result;
+      Throwable throwable;
+      if (isFirstThread) {
+        // Invoke outside resultsCache lock, so other threads can wait
+        try {
+          result = callable.call();
+          throwable = null;
+        } catch (Throwable t) {
+          result = null;
+          throwable = t;
+        }
+        synchronized (resultsCache) {
+          assert !resultsCache.finished;
+          resultsCache.result = result;
+          resultsCache.throwable = throwable;
+          resultsCache.finished = true;
+          resultsCache.notifyAll();
+        }
+      } else {
+        synchronized (resultsCache) {
+          // Wait for results from the first thread, including any exception
+          while (!resultsCache.finished) {
+            resultsCache.wait();
+          }
+          assert resultsCache.finished;
+          result = resultsCache.result;
+          throwable = resultsCache.throwable;
+        }
+      }
+      if (throwable != null) {
+        if (isFirstThread && throwable instanceof ThreadDeath) {
+          // Propagate directly back to first thread
+          throw (ThreadDeath)throwable;
+        }
+        throw new ExecutionException(resultsCache.throwable);
+      }
+      return result;
+    } finally {
+      synchronized (resultsCache) {
+        assert resultsCache.threadCount > 0;
+        resultsCache.threadCount--;
+        if (resultsCache.threadCount == 0) {
+          resultsCache.finished = false;
+          resultsCache.result = null;
+          resultsCache.throwable = null;
+        }
+      }
+    }
+  }
 }

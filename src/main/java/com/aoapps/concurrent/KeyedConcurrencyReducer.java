@@ -36,91 +36,95 @@ import java.util.concurrent.ExecutionException;
  */
 public class KeyedConcurrencyReducer<K, R> {
 
-	private final Map<K, ResultsCache<R>> executeSerializedStatus = new HashMap<>();
+  private final Map<K, ResultsCache<R>> executeSerializedStatus = new HashMap<>();
 
-	/**
-	 * <p>
-	 * Executes a callable at most once for the given key.  If a callable is
-	 * in the process of being executed by a different thread (determined by key,
-	 * not the callable instance), the current thread will wait and use the
-	 * results obtained by the other thread.
-	 * </p>
-	 * <p>
-	 * Consider the following scenario:
-	 * </p>
-	 * <ol>
-	 *   <li>Thread A invokes MySQL: "CHECK TABLE example FAST QUICK"</li>
-	 *   <li>Thread B invokes MySQL: "CHECK TABLE example FAST QUICK" before Thread A has finished</li>
-	 *   <li>Thread B wait for results determined by Thread A</li>
-	 *   <li>Thread A completes, passes results to Thread B</li>
-	 *   <li>Threads A and B both return the results obtained only by Thread A</li>
-	 * </ol>
-	 */
-	@SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
-	public R executeSerialized(K key, Callable<? extends R> callable) throws InterruptedException, ExecutionException {
-		final boolean isFirstThread;
-		final ResultsCache<R> resultsCache;
-		synchronized(executeSerializedStatus) {
-			// Look for any existing entry for this key
-			ResultsCache<R> resultsCacheT = executeSerializedStatus.get(key);
-			if(resultsCacheT==null) {
-				executeSerializedStatus.put(key, resultsCacheT = new ResultsCache<>());
-			}
-			resultsCache = resultsCacheT;
-			isFirstThread = (resultsCache.threadCount == 0);
-			if(resultsCache.threadCount == Integer.MAX_VALUE) throw new IllegalStateException("threadCount == Integer.MAX_VALUE");
-			resultsCache.threadCount++;
-			if(isFirstThread) resultsCache.finished = false;
-		}
-		try {
-			R result;
-			Throwable throwable;
-			if(isFirstThread) {
-				// Invoke outside resultsCache lock, so other threads can wait
-				try {
-					result = callable.call();
-					throwable = null;
-				} catch(Throwable t) {
-					result = null;
-					throwable = t;
-				}
-				synchronized(resultsCache) {
-					assert !resultsCache.finished;
-					resultsCache.result = result;
-					resultsCache.throwable = throwable;
-					resultsCache.finished = true;
-					resultsCache.notifyAll();
-				}
-			} else {
-				synchronized(resultsCache) {
-					// Wait for results from the first thread, including any exception
-					while(!resultsCache.finished) {
-						resultsCache.wait();
-					}
-					assert resultsCache.finished;
-					result = resultsCache.result;
-					throwable = resultsCache.throwable;
-				}
-			}
-			if(throwable != null) {
-				if(isFirstThread && throwable instanceof ThreadDeath) {
-					// Propagate directly back to first thread
-					throw (ThreadDeath)throwable;
-				}
-				throw new ExecutionException(resultsCache.throwable);
-			}
-			return result;
-		} finally {
-			synchronized(executeSerializedStatus) {
-				assert resultsCache.threadCount > 0;
-				resultsCache.threadCount--;
-				if(resultsCache.threadCount == 0) {
-					resultsCache.finished = false;
-					resultsCache.result = null;
-					resultsCache.throwable = null;
-					executeSerializedStatus.remove(key);
-				}
-			}
-		}
-	}
+  /**
+   * <p>
+   * Executes a callable at most once for the given key.  If a callable is
+   * in the process of being executed by a different thread (determined by key,
+   * not the callable instance), the current thread will wait and use the
+   * results obtained by the other thread.
+   * </p>
+   * <p>
+   * Consider the following scenario:
+   * </p>
+   * <ol>
+   *   <li>Thread A invokes MySQL: "CHECK TABLE example FAST QUICK"</li>
+   *   <li>Thread B invokes MySQL: "CHECK TABLE example FAST QUICK" before Thread A has finished</li>
+   *   <li>Thread B wait for results determined by Thread A</li>
+   *   <li>Thread A completes, passes results to Thread B</li>
+   *   <li>Threads A and B both return the results obtained only by Thread A</li>
+   * </ol>
+   */
+  @SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
+  public R executeSerialized(K key, Callable<? extends R> callable) throws InterruptedException, ExecutionException {
+    final boolean isFirstThread;
+    final ResultsCache<R> resultsCache;
+    synchronized (executeSerializedStatus) {
+      // Look for any existing entry for this key
+      ResultsCache<R> resultsCacheT = executeSerializedStatus.get(key);
+      if (resultsCacheT == null) {
+        executeSerializedStatus.put(key, resultsCacheT = new ResultsCache<>());
+      }
+      resultsCache = resultsCacheT;
+      isFirstThread = (resultsCache.threadCount == 0);
+      if (resultsCache.threadCount == Integer.MAX_VALUE) {
+        throw new IllegalStateException("threadCount == Integer.MAX_VALUE");
+      }
+      resultsCache.threadCount++;
+      if (isFirstThread) {
+        resultsCache.finished = false;
+      }
+    }
+    try {
+      R result;
+      Throwable throwable;
+      if (isFirstThread) {
+        // Invoke outside resultsCache lock, so other threads can wait
+        try {
+          result = callable.call();
+          throwable = null;
+        } catch (Throwable t) {
+          result = null;
+          throwable = t;
+        }
+        synchronized (resultsCache) {
+          assert !resultsCache.finished;
+          resultsCache.result = result;
+          resultsCache.throwable = throwable;
+          resultsCache.finished = true;
+          resultsCache.notifyAll();
+        }
+      } else {
+        synchronized (resultsCache) {
+          // Wait for results from the first thread, including any exception
+          while (!resultsCache.finished) {
+            resultsCache.wait();
+          }
+          assert resultsCache.finished;
+          result = resultsCache.result;
+          throwable = resultsCache.throwable;
+        }
+      }
+      if (throwable != null) {
+        if (isFirstThread && throwable instanceof ThreadDeath) {
+          // Propagate directly back to first thread
+          throw (ThreadDeath)throwable;
+        }
+        throw new ExecutionException(resultsCache.throwable);
+      }
+      return result;
+    } finally {
+      synchronized (executeSerializedStatus) {
+        assert resultsCache.threadCount > 0;
+        resultsCache.threadCount--;
+        if (resultsCache.threadCount == 0) {
+          resultsCache.finished = false;
+          resultsCache.result = null;
+          resultsCache.throwable = null;
+          executeSerializedStatus.remove(key);
+        }
+      }
+    }
+  }
 }

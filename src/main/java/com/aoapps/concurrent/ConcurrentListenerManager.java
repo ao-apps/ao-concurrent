@@ -43,284 +43,288 @@ import org.apache.commons.lang3.NotImplementedException;
  */
 public class ConcurrentListenerManager<L> implements AutoCloseable {
 
-	private static final Logger logger = Logger.getLogger(ConcurrentListenerManager.class.getName());
+  private static final Logger logger = Logger.getLogger(ConcurrentListenerManager.class.getName());
 
-	@FunctionalInterface
-	public static interface Event<L> {
-		/**
-		 * Creates the Runnable that will call the event callback on the given listener.
-		 */
-		Runnable createCall(L listener);
-	}
+  @FunctionalInterface
+  public static interface Event<L> {
+    /**
+     * Creates the Runnable that will call the event callback on the given listener.
+     */
+    Runnable createCall(L listener);
+  }
 
-	private static class EventCall<L> {
-		final Map<L, Boolean> unfinishedCalls;
-		final Runnable call;
-		EventCall(Map<L, Boolean> unfinishedCalls, Runnable call) {
-			this.unfinishedCalls = unfinishedCalls;
-			this.call = call;
-		}
-	}
+  private static class EventCall<L> {
+    final Map<L, Boolean> unfinishedCalls;
+    final Runnable call;
+    EventCall(Map<L, Boolean> unfinishedCalls, Runnable call) {
+      this.unfinishedCalls = unfinishedCalls;
+      this.call = call;
+    }
+  }
 
-	/**
-	 * The object instance used to indicate that a listener is called synchronously.
-	 */
-	private static final Queue<EventCall<Object>> SYNC_DO_NOT_QUEUE = new Queue<EventCall<Object>>() {
+  /**
+   * The object instance used to indicate that a listener is called synchronously.
+   */
+  private static final Queue<EventCall<Object>> SYNC_DO_NOT_QUEUE = new Queue<EventCall<Object>>() {
 
-		private static final String MESSAGE = "This queue is a synchronous marker and none of its method should be called.";
+    private static final String MESSAGE = "This queue is a synchronous marker and none of its method should be called.";
 
-		@Override
-		public boolean add(EventCall<Object> e) {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public boolean add(EventCall<Object> e) {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public boolean offer(EventCall<Object> e) {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public boolean offer(EventCall<Object> e) {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public EventCall<Object> remove() {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public EventCall<Object> remove() {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public EventCall<Object> poll() {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public EventCall<Object> poll() {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public EventCall<Object> element() {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public EventCall<Object> element() {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public EventCall<Object> peek() {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public EventCall<Object> peek() {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public int size() {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public int size() {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public boolean isEmpty() {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public boolean isEmpty() {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public boolean contains(Object o) {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public boolean contains(Object o) {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public Iterator<EventCall<Object>> iterator() {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public Iterator<EventCall<Object>> iterator() {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public Object[] toArray() {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public Object[] toArray() {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public <T> T[] toArray(T[] a) {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public <T> T[] toArray(T[] a) {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public boolean remove(Object o) {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public boolean remove(Object o) {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public boolean containsAll(Collection<?> c) {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public boolean containsAll(Collection<?> c) {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public boolean addAll(Collection<? extends EventCall<Object>> c) {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public boolean addAll(Collection<? extends EventCall<Object>> c) {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public boolean removeAll(Collection<?> c) {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public boolean removeAll(Collection<?> c) {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public boolean retainAll(Collection<?> c) {
-			throw new AssertionError(MESSAGE);
-		}
+    @Override
+    public boolean retainAll(Collection<?> c) {
+      throw new AssertionError(MESSAGE);
+    }
 
-		@Override
-		public void clear() {
-			throw new AssertionError(MESSAGE);
-		}
-	};
+    @Override
+    public void clear() {
+      throw new AssertionError(MESSAGE);
+    }
+  };
 
-	/**
-	 * A queue of events per listener.  When the queue is null, no executor is running for the listener.
-	 * When the queue is non-null, even when empty, an executor is running for the listener.
-	 */
-	private final Map<L, Queue<EventCall<L>>> listeners = new IdentityHashMap<>();
+  /**
+   * A queue of events per listener.  When the queue is null, no executor is running for the listener.
+   * When the queue is non-null, even when empty, an executor is running for the listener.
+   */
+  private final Map<L, Queue<EventCall<L>>> listeners = new IdentityHashMap<>();
 
-	private final Executors executor = new Executors();
+  private final Executors executor = new Executors();
 
-	/**
-	 * When no longer needed, close should be called to free resources.
-	 */
-	@Override
-	public void close() {
-		logger.log(Level.FINE, "Calling executor.close()");
-		executor.close();
-		logger.log(Level.FINE, "executor.close() finished");
-	}
+  /**
+   * When no longer needed, close should be called to free resources.
+   */
+  @Override
+  public void close() {
+    logger.log(Level.FINE, "Calling executor.close()");
+    executor.close();
+    logger.log(Level.FINE, "executor.close() finished");
+  }
 
-	/**
-	 * Adds a listener.
-	 *
-	 * @param  synchronous  When true, listener will be called synchronously by the I/O thread;
-	 *                      when false, listener will be called asynchronously by a separate thread.
-	 *
-	 * @throws IllegalStateException  If the listener has already been added
-	 */
-	@SuppressWarnings("unchecked")
-	public void addListener(L listener, boolean synchronous) throws IllegalStateException {
-		synchronized(listeners) {
-			if(listeners.containsKey(listener)) throw new IllegalStateException("listener already added");
-			listeners.put(listener, synchronous ? (Queue)SYNC_DO_NOT_QUEUE : null);
-		}
-	}
+  /**
+   * Adds a listener.
+   *
+   * @param  synchronous  When true, listener will be called synchronously by the I/O thread;
+   *                      when false, listener will be called asynchronously by a separate thread.
+   *
+   * @throws IllegalStateException  If the listener has already been added
+   */
+  @SuppressWarnings("unchecked")
+  public void addListener(L listener, boolean synchronous) throws IllegalStateException {
+    synchronized (listeners) {
+      if (listeners.containsKey(listener)) {
+        throw new IllegalStateException("listener already added");
+      }
+      listeners.put(listener, synchronous ? (Queue)SYNC_DO_NOT_QUEUE : null);
+    }
+  }
 
-	/**
-	 * Removes a listener.
-	 *
-	 * @return true if the listener was found
-	 */
-	public boolean removeListener(L listener) {
-		synchronized(listeners) {
-			if(!listeners.containsKey(listener)) {
-				return false;
-			} else {
-				listeners.remove(listener);
-				return true;
-			}
-		}
-	}
+  /**
+   * Removes a listener.
+   *
+   * @return true if the listener was found
+   */
+  public boolean removeListener(L listener) {
+    synchronized (listeners) {
+      if (!listeners.containsKey(listener)) {
+        return false;
+      } else {
+        listeners.remove(listener);
+        return true;
+      }
+    }
+  }
 
-	/**
-	 * Enqueues a new event to all listener event queues.
-	 * If the caller needs to wait until the event has been handled by each
-	 * of the listeners, then call .get() on the returned Future.
-	 */
-	public Future<?> enqueueEvent(Event<? super L> event) {
-		synchronized(listeners) {
-			// The future is not finished until all individual calls have removed themselves from this map
-			// and this map is empty.
-			final Map<L, Boolean> unfinishedCalls = AoCollections.newIdentityHashMap(listeners.size());
-			for(Map.Entry<L, Queue<EventCall<L>>> entry : listeners.entrySet()) {
-				final L listener = entry.getKey();
-				final Runnable call = event.createCall(listener);
-				Queue<EventCall<L>> queue = entry.getValue();
-				if(queue == (Queue)SYNC_DO_NOT_QUEUE) {
-					// Call synchronous listeners immediately
-					try {
-						call.run();
-					} catch(ThreadDeath td) {
-						throw td;
-					} catch(Throwable t) {
-						logger.log(Level.SEVERE, null, t);
-					}
-				} else {
-					// Enqueue asynchronous calls
-					boolean isFirst;
-					if(queue == null) {
-						queue = new LinkedList<>();
-						entry.setValue(queue);
-						isFirst = true;
-					} else {
-						isFirst = false;
-					}
-					unfinishedCalls.put(listener, Boolean.TRUE);
-					queue.add(new EventCall<>(unfinishedCalls, call));
-					if(isFirst) {
-						// When the queue is first created, we submit the queue runner to the executor for queue processing
-						// There is only one executor per queue, and on queue per listener
-						executor.getUnbounded().submit(() -> {
-							while(true) {
-								// Invoke each of the events until the queue is empty
-								EventCall<L> eventCall;
-								synchronized(listeners) {
-									Queue<EventCall<L>> queue1 = listeners.get(listener);
-									if(queue1.isEmpty()) {
-										// Remove the empty queue so a new executor will be submitted on next event
-										listeners.remove(listener);
-										break;
-									} else {
-										eventCall = queue1.remove();
-									}
-								}
-								// Run the event without holding the listeners lock
-								try {
-									eventCall.call.run();
-								} catch(ThreadDeath td) {
-									throw td;
-								} catch(Throwable t) {
-									logger.log(Level.SEVERE, null, t);
-								}
-								// Remove this listener from unfinished calls
-								synchronized(eventCall.unfinishedCalls) {
-									Boolean removedValue = eventCall.unfinishedCalls.remove(listener);
-									// Notify when the last call completes
-									if(eventCall.unfinishedCalls.isEmpty()) {
-										eventCall.unfinishedCalls.notifyAll();
-									}
-									if(removedValue == null) throw new AssertionError();
-								}
-							}
-						});
-					}
-				}
-			}
-			// This future will wait until unfinishedCalls is empty
-			// Java 9: new Future<>
-			return new Future<Object>() {
-				@Override
-				public boolean cancel(boolean mayInterruptIfRunning) {
-					// Not supported
-					return false;
-				}
+  /**
+   * Enqueues a new event to all listener event queues.
+   * If the caller needs to wait until the event has been handled by each
+   * of the listeners, then call .get() on the returned Future.
+   */
+  public Future<?> enqueueEvent(Event<? super L> event) {
+    synchronized (listeners) {
+      // The future is not finished until all individual calls have removed themselves from this map
+      // and this map is empty.
+      final Map<L, Boolean> unfinishedCalls = AoCollections.newIdentityHashMap(listeners.size());
+      for (Map.Entry<L, Queue<EventCall<L>>> entry : listeners.entrySet()) {
+        final L listener = entry.getKey();
+        final Runnable call = event.createCall(listener);
+        Queue<EventCall<L>> queue = entry.getValue();
+        if (queue == (Queue)SYNC_DO_NOT_QUEUE) {
+          // Call synchronous listeners immediately
+          try {
+            call.run();
+          } catch (ThreadDeath td) {
+            throw td;
+          } catch (Throwable t) {
+            logger.log(Level.SEVERE, null, t);
+          }
+        } else {
+          // Enqueue asynchronous calls
+          boolean isFirst;
+          if (queue == null) {
+            queue = new LinkedList<>();
+            entry.setValue(queue);
+            isFirst = true;
+          } else {
+            isFirst = false;
+          }
+          unfinishedCalls.put(listener, Boolean.TRUE);
+          queue.add(new EventCall<>(unfinishedCalls, call));
+          if (isFirst) {
+            // When the queue is first created, we submit the queue runner to the executor for queue processing
+            // There is only one executor per queue, and on queue per listener
+            executor.getUnbounded().submit(() -> {
+              while (true) {
+                // Invoke each of the events until the queue is empty
+                EventCall<L> eventCall;
+                synchronized (listeners) {
+                  Queue<EventCall<L>> queue1 = listeners.get(listener);
+                  if (queue1.isEmpty()) {
+                    // Remove the empty queue so a new executor will be submitted on next event
+                    listeners.remove(listener);
+                    break;
+                  } else {
+                    eventCall = queue1.remove();
+                  }
+                }
+                // Run the event without holding the listeners lock
+                try {
+                  eventCall.call.run();
+                } catch (ThreadDeath td) {
+                  throw td;
+                } catch (Throwable t) {
+                  logger.log(Level.SEVERE, null, t);
+                }
+                // Remove this listener from unfinished calls
+                synchronized (eventCall.unfinishedCalls) {
+                  Boolean removedValue = eventCall.unfinishedCalls.remove(listener);
+                  // Notify when the last call completes
+                  if (eventCall.unfinishedCalls.isEmpty()) {
+                    eventCall.unfinishedCalls.notifyAll();
+                  }
+                  if (removedValue == null) {
+                    throw new AssertionError();
+                  }
+                }
+              }
+            });
+          }
+        }
+      }
+      // This future will wait until unfinishedCalls is empty
+      // Java 9: new Future<>
+      return new Future<Object>() {
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+          // Not supported
+          return false;
+        }
 
-				@Override
-				public boolean isCancelled() {
-					// Not supported
-					return false;
-				}
+        @Override
+        public boolean isCancelled() {
+          // Not supported
+          return false;
+        }
 
-				@Override
-				public boolean isDone() {
-					synchronized(unfinishedCalls) {
-						return unfinishedCalls.isEmpty();
-					}
-				}
+        @Override
+        public boolean isDone() {
+          synchronized (unfinishedCalls) {
+            return unfinishedCalls.isEmpty();
+          }
+        }
 
-				@Override
-				public Object get() throws InterruptedException {
-					synchronized(unfinishedCalls) {
-						while(!unfinishedCalls.isEmpty()) {
-							unfinishedCalls.wait();
-						}
-						return null;
-					}
-				}
+        @Override
+        public Object get() throws InterruptedException {
+          synchronized (unfinishedCalls) {
+            while (!unfinishedCalls.isEmpty()) {
+              unfinishedCalls.wait();
+            }
+            return null;
+          }
+        }
 
-				@Override
-				public Object get(long timeout, TimeUnit unit) throws TimeoutException {
-					throw new NotImplementedException("TODO");
-				}
-			};
-		}
-	}
+        @Override
+        public Object get(long timeout, TimeUnit unit) throws TimeoutException {
+          throw new NotImplementedException("TODO");
+        }
+      };
+    }
+  }
 }

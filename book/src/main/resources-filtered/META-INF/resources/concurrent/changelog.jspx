@@ -22,276 +22,276 @@ You should have received a copy of the GNU Lesser General Public License
 along with ao-concurrent.  If not, see <https://www.gnu.org/licenses/>.
 -->
 <jsp:root
-	xmlns:ao="https://oss.aoapps.com/taglib/"
-	xmlns:c="http://java.sun.com/jsp/jstl/core"
-	xmlns:changelog="https://semanticcms.com/changelog/taglib/"
-	xmlns:core="https://semanticcms.com/core/taglib/"
-	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
-	xmlns:jsp="http://java.sun.com/JSP/Page"
-	version="2.1"
+  xmlns:ao="https://oss.aoapps.com/taglib/"
+  xmlns:c="http://java.sun.com/jsp/jstl/core"
+  xmlns:changelog="https://semanticcms.com/changelog/taglib/"
+  xmlns:core="https://semanticcms.com/core/taglib/"
+  xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+  xmlns:jsp="http://java.sun.com/JSP/Page"
+  version="2.1"
 >
-	<jsp:directive.page language="java" pageEncoding="UTF-8" />
-	<jsp:directive.page session="false" />
-	<core:page
-		title="@{documented.name} Changelog"
-		shortTitle="Changelog"
-		tocLevels="1"
-		datePublished="2016-10-29T17:54:36-05:00"
-		dateModified="2022-02-15T20:50:25-06:00"
-	>
-		<c:if test="${fn:endsWith('@{project.version}', '-SNAPSHOT') and !fn:endsWith('@{project.version}', '-POST-SNAPSHOT')}">
-			<changelog:release
-				projectName="@{documented.name}"
-				version="@{project.version}"
-				groupId="@{project.groupId}"
-				artifactId="@{documented.artifactId}"
-				repository="@{nexusUrl}content/repositories/snapshots/"
-				scmUrl="@{project.scm.url}"
-			/>
-		</c:if>
+  <jsp:directive.page language="java" pageEncoding="UTF-8" />
+  <jsp:directive.page session="false" />
+  <core:page
+    title="@{documented.name} Changelog"
+    shortTitle="Changelog"
+    tocLevels="1"
+    datePublished="2016-10-29T17:54:36-05:00"
+    dateModified="2022-02-15T20:50:25-06:00"
+  >
+    <c:if test="${fn:endsWith('@{project.version}', '-SNAPSHOT') and !fn:endsWith('@{project.version}', '-POST-SNAPSHOT')}">
+      <changelog:release
+        projectName="@{documented.name}"
+        version="@{project.version}"
+        groupId="@{project.groupId}"
+        artifactId="@{documented.artifactId}"
+        repository="@{nexusUrl}content/repositories/snapshots/"
+        scmUrl="@{project.scm.url}"
+      />
+    </c:if>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="4.0.2"
-			datePublished="2022-02-15T20:50:25-06:00"
-			groupId="@{project.groupId}"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>Now properly restoring Thread interrupted state on <code>InterruptedException</code>.</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="4.0.2"
+      datePublished="2022-02-15T20:50:25-06:00"
+      groupId="@{project.groupId}"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>Now properly restoring Thread interrupted state on <code>InterruptedException</code>.</li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="4.0.1"
-			datePublished="2021-10-15T19:23:10-05:00"
-			groupId="@{project.groupId}"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>
-					<code>notify()</code> replaced with <code>notifyAll()</code> since more than one thread can be
-					waiting on <code>Future.get()</code>.
-				</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="4.0.1"
+      datePublished="2021-10-15T19:23:10-05:00"
+      groupId="@{project.groupId}"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>
+          <code>notify()</code> replaced with <code>notifyAll()</code> since more than one thread can be
+          waiting on <code>Future.get()</code>.
+        </li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="4.0.0"
-			datePublished="2021-07-06T04:47:37-05:00"
-			groupId="@{project.groupId}"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>Now supports Java 9+ modules with included <code>module-info.class</code>.</li>
-				<li>Maven artifact relocated from <code>com.aoindustries:ao-concurrent</code> to <code>com.aoapps:ao-concurrent</code>.</li>
-				<li>Package renamed from <code>com.aoindustries.concurrent</code> to <code>com.aoapps.concurrent</code>.</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="4.0.0"
+      datePublished="2021-07-06T04:47:37-05:00"
+      groupId="@{project.groupId}"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>Now supports Java 9+ modules with included <code>module-info.class</code>.</li>
+        <li>Maven artifact relocated from <code>com.aoindustries:ao-concurrent</code> to <code>com.aoapps:ao-concurrent</code>.</li>
+        <li>Package renamed from <code>com.aoindustries.concurrent</code> to <code>com.aoapps.concurrent</code>.</li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="3.1.0"
-			datePublished="2020-12-28T05:52:05-06:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>
-					<code>ConcurrencyLimiter</code> divided into two implementations:
-					<code>KeyedConcurrencyReducer</code> (when limiting by key) and <code>ConcurrencyReducer</code>
-					when is a single reduction.
-				</li>
-				<li>
-					On <code>ThreadDeath</code> the first thread still gets the actual <code>ThreadDeath</code>,
-					while all waiting threads now get <code>ExecutionException</code>.  Previously, on thread death
-					waiting threads were never notified.
-				</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="3.1.0"
+      datePublished="2020-12-28T05:52:05-06:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>
+          <code>ConcurrencyLimiter</code> divided into two implementations:
+          <code>KeyedConcurrencyReducer</code> (when limiting by key) and <code>ConcurrencyReducer</code>
+          when is a single reduction.
+        </li>
+        <li>
+          On <code>ThreadDeath</code> the first thread still gets the actual <code>ThreadDeath</code>,
+          while all waiting threads now get <code>ExecutionException</code>.  Previously, on thread death
+          waiting threads were never notified.
+        </li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="3.0.0"
-			datePublished="2020-11-17T22:11:21-06:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>
-					Converted from <code>Disposable</code> (deprecated) to <code>AutoCloseable</code>, which
-					supports try-with-resources in Java 1.7+.
-				</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="3.0.0"
+      datePublished="2020-11-17T22:11:21-06:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>
+          Converted from <code>Disposable</code> (deprecated) to <code>AutoCloseable</code>, which
+          supports try-with-resources in Java 1.7+.
+        </li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="2.0.1"
-			datePublished="2020-03-28T00:15:42-05:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>
-					The sequential executor is no longer substituted in place of the per-processor
-					executor on single-CPU systems.  This is because the sequential executor and
-					per-processor executor have different behavior when <code>Future.get(…)</code> is never called.
-					When <code>Future.get(…)</code> is never called, the sequential executor does
-					not execute the task while the per-processor will still execute it in the background.
-				</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="2.0.1"
+      datePublished="2020-03-28T00:15:42-05:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>
+          The sequential executor is no longer substituted in place of the per-processor
+          executor on single-CPU systems.  This is because the sequential executor and
+          per-processor executor have different behavior when <code>Future.get(…)</code> is never called.
+          When <code>Future.get(…)</code> is never called, the sequential executor does
+          not execute the task while the per-processor will still execute it in the background.
+        </li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="2.0.0"
-			datePublished="2020-03-27T01:28:23-05:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>Minimum Java version changed from 1.7 to 1.8.</li>
-				<li>
-					Reduced use of property substitutions in <code>pom.xml</code>.
-					This is to help 3rd-party parsers that fail to perform full Maven-compatible substitutions.
-				</li>
-				<li>
-					Renamed package from <code>com.aoindustries.util.concurrent</code> to
-					<code>com.aoindustries.concurrent</code>.  Resolves split-package with
-					<core:link book="/lang" page="/index.jspx" />.
-				</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="2.0.0"
+      datePublished="2020-03-27T01:28:23-05:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>Minimum Java version changed from 1.7 to 1.8.</li>
+        <li>
+          Reduced use of property substitutions in <code>pom.xml</code>.
+          This is to help 3rd-party parsers that fail to perform full Maven-compatible substitutions.
+        </li>
+        <li>
+          Renamed package from <code>com.aoindustries.util.concurrent</code> to
+          <code>com.aoindustries.concurrent</code>.  Resolves split-package with
+          <core:link book="/lang" page="/index.jspx" />.
+        </li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="1.1.2"
-			datePublished="2019-06-29T19:48:55-05:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>
-					<p>
-						Using <code>;-split-package:=first</code> of <ao:a href="http://felix.apache.org/documentation/subprojects/apache-felix-maven-bundle-plugin-bnd.html">maven-bundle-plugin</ao:a>
-						to avoid bundling the classes in the split-package <code>com.aoindustries.util.concurrent</code> from
-						<core:link book="/lang" page="/index.jspx" />.
-					</p>
-					<p>
-						This split-package is transitional.  In the future we will have more fine-grained <code>*-i18n</code> projects.
-					</p>
-				</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="1.1.2"
+      datePublished="2019-06-29T19:48:55-05:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>
+          <p>
+            Using <code>;-split-package:=first</code> of <ao:a href="http://felix.apache.org/documentation/subprojects/apache-felix-maven-bundle-plugin-bnd.html">maven-bundle-plugin</ao:a>
+            to avoid bundling the classes in the split-package <code>com.aoindustries.util.concurrent</code> from
+            <core:link book="/lang" page="/index.jspx" />.
+          </p>
+          <p>
+            This split-package is transitional.  In the future we will have more fine-grained <code>*-i18n</code> projects.
+          </p>
+        </li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="1.1.1"
-			datePublished="2019-06-19T09:01:26-05:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>Using managed dependencies:
-					<ol>
-						<li>This project uses managed dependencies.</li>
-						<li>This project's managed dependencies may also be imported by other projects.</li>
-					</ol>
-				</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="1.1.1"
+      datePublished="2019-06-19T09:01:26-05:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>Using managed dependencies:
+          <ol>
+            <li>This project uses managed dependencies.</li>
+            <li>This project's managed dependencies may also be imported by other projects.</li>
+          </ol>
+        </li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="1.1.0"
-			datePublished="2019-04-24T01:36:59-05:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>Minimum Java version changed from 1.6 to 1.7.</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="1.1.0"
+      datePublished="2019-04-24T01:36:59-05:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>Minimum Java version changed from 1.6 to 1.7.</li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="1.0.3"
-			datePublished="2017-07-19T22:49:26-05:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>Updated dependencies.</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="1.0.3"
+      datePublished="2017-07-19T22:49:26-05:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>Updated dependencies.</li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="1.0.2"
-			datePublished="2016-11-15T17:38:45-06:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>New <core:link book="/parent" page="/index.jspx" /> POM to simplify <code>pom.xml</code> files.</li>
-				<li>Project documentation moved to per-project book in <ao:a href="https://semanticcms.com/">SemanticCMS</ao:a> format.</li>
-				<li>Added changelog as top-level project link.</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="1.0.2"
+      datePublished="2016-11-15T17:38:45-06:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>New <core:link book="/parent" page="/index.jspx" /> POM to simplify <code>pom.xml</code> files.</li>
+        <li>Project documentation moved to per-project book in <ao:a href="https://semanticcms.com/">SemanticCMS</ao:a> format.</li>
+        <li>Added changelog as top-level project link.</li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="1.0.1"
-			datePublished="2016-10-20T18:07:00-05:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>Accepting less specific generic bounds.</li>
-				<li>Improved Javadoc formatting.</li>
-				<li>Improved README formatting.</li>
-			</ul>
-		</changelog:release>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="1.0.1"
+      datePublished="2016-10-20T18:07:00-05:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>Accepting less specific generic bounds.</li>
+        <li>Improved Javadoc formatting.</li>
+        <li>Improved README formatting.</li>
+      </ul>
+    </changelog:release>
 
-		<changelog:release
-			projectName="@{documented.name}"
-			version="1.0.0"
-			datePublished="2016-10-04T19:22:00-05:00"
-			groupId="com.aoindustries"
-			artifactId="@{documented.artifactId}"
-			scmUrl="@{project.scm.url}"
-		>
-			<ul>
-				<li>Project moved to GitHub and Maven.</li>
-				<li>Added multiple per-processor thread pools to avoid possible deadlock while also avoiding blowing-out to unbounded concurrency.</li>
-				<li>Now automatically maintains some ThreadLocal values between caller and executor during concurrent processing, and provides wrapper hook for subclasses to extend.</li>
-				<li>Cleaned-up executors API.</li>
-				<li>Providing access to preferred concurrency.</li>
-				<li>Added a sequential executor for when non-threaded execution is desired.</li>
-				<li>Each lock object now a small empty class to help identify lock contention.
-					<p>
-						The lock contention profiler in NetBeans is just showing "java.lang.Object" all over, and can't seem to
-						get from the lock object id to the actual object in the heap dump using OQL (id not found).
-					</p>
-				</li>
-				<li>Reduced lock contention significantly through atomic operations and fine-grained locking.</li>
-			</ul>
-		</changelog:release>
-	</core:page>
+    <changelog:release
+      projectName="@{documented.name}"
+      version="1.0.0"
+      datePublished="2016-10-04T19:22:00-05:00"
+      groupId="com.aoindustries"
+      artifactId="@{documented.artifactId}"
+      scmUrl="@{project.scm.url}"
+    >
+      <ul>
+        <li>Project moved to GitHub and Maven.</li>
+        <li>Added multiple per-processor thread pools to avoid possible deadlock while also avoiding blowing-out to unbounded concurrency.</li>
+        <li>Now automatically maintains some ThreadLocal values between caller and executor during concurrent processing, and provides wrapper hook for subclasses to extend.</li>
+        <li>Cleaned-up executors API.</li>
+        <li>Providing access to preferred concurrency.</li>
+        <li>Added a sequential executor for when non-threaded execution is desired.</li>
+        <li>Each lock object now a small empty class to help identify lock contention.
+          <p>
+            The lock contention profiler in NetBeans is just showing "java.lang.Object" all over, and can't seem to
+            get from the lock object id to the actual object in the heap dump using OQL (id not found).
+          </p>
+        </li>
+        <li>Reduced lock contention significantly through atomic operations and fine-grained locking.</li>
+      </ul>
+    </changelog:release>
+  </core:page>
 </jsp:root>
