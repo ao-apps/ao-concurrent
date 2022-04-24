@@ -56,6 +56,7 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
   private static class EventCall<L> {
     final Map<L, Boolean> unfinishedCalls;
     final Runnable call;
+
     EventCall(Map<L, Boolean> unfinishedCalls, Runnable call) {
       this.unfinishedCalls = unfinishedCalls;
       this.call = call;
@@ -192,7 +193,7 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
       if (listeners.containsKey(listener)) {
         throw new IllegalStateException("listener already added");
       }
-      listeners.put(listener, synchronous ? (Queue)SYNC_DO_NOT_QUEUE : null);
+      listeners.put(listener, synchronous ? (Queue) SYNC_DO_NOT_QUEUE : null);
     }
   }
 
@@ -226,7 +227,7 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
         final L listener = entry.getKey();
         final Runnable call = event.createCall(listener);
         Queue<EventCall<L>> queue = entry.getValue();
-        if (queue == (Queue)SYNC_DO_NOT_QUEUE) {
+        if (queue == (Queue) SYNC_DO_NOT_QUEUE) {
           // Call synchronous listeners immediately
           try {
             call.run();

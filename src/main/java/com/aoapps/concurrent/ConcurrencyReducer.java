@@ -107,7 +107,7 @@ public class ConcurrencyReducer<R> {
       if (throwable != null) {
         if (isFirstThread && throwable instanceof ThreadDeath) {
           // Propagate directly back to first thread
-          throw (ThreadDeath)throwable;
+          throw (ThreadDeath) throwable;
         }
         throw new ExecutionException(resultsCache.throwable);
       }

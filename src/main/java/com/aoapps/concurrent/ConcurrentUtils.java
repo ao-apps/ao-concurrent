@@ -56,7 +56,7 @@ public final class ConcurrentUtils {
    * Gets all of the results of the futures, returning a modifiable list of the results.
    */
   public static <E> List<E> getAll(Iterable<? extends Future<? extends E>> futures) throws InterruptedException, ExecutionException {
-    int startSize = (futures instanceof Collection<?>) ? ((Collection<?>)futures).size() : 10;
+    int startSize = (futures instanceof Collection<?>) ? ((Collection<?>) futures).size() : 10;
     return getAll(futures, new ArrayList<>(startSize));
   }
 
