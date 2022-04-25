@@ -22,3 +22,6 @@
 
 # Whitespace updates to current standards.
 0804cbc0c89c913ea058b1f735171454abd109cc
+
+# Performed automatic source code clean-up with rewrite-maven-plugin
+bc89be87a39bbec8b0f64b267e2440da6497e700
