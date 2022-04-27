@@ -67,7 +67,7 @@ public class KeyedConcurrencyReducer<K, R> {
         executeSerializedStatus.put(key, resultsCacheT = new ResultsCache<>());
       }
       resultsCache = resultsCacheT;
-      isFirstThread = (resultsCache.threadCount == 0);
+      isFirstThread = resultsCache.threadCount == 0;
       if (resultsCache.threadCount == Integer.MAX_VALUE) {
         throw new IllegalStateException("threadCount == Integer.MAX_VALUE");
       }

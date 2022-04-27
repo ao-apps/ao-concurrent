@@ -65,7 +65,7 @@ public class ConcurrencyReducer<R> {
   public R executeSerialized(Callable<? extends R> callable) throws InterruptedException, ExecutionException {
     final boolean isFirstThread;
     synchronized (resultsCache) {
-      isFirstThread = (resultsCache.threadCount == 0);
+      isFirstThread = resultsCache.threadCount == 0;
       if (resultsCache.threadCount == Integer.MAX_VALUE) {
         throw new IllegalStateException("threadCount == Integer.MAX_VALUE");
       }

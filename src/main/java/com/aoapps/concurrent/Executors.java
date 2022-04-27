@@ -370,7 +370,7 @@ public class Executors implements AutoCloseable {
       // Empty lock class to help heap profile
     }
     private final IncompleteLock incompleteLock = new IncompleteLock();
-    private boolean canceled = false;
+    private boolean canceled;
     private IncompleteFuture<V> future; // Only available once submitted
 
     private IncompleteTimerTask(
@@ -1043,7 +1043,7 @@ public class Executors implements AutoCloseable {
     private static void close() {
       synchronized (perProcessorExecutorServicesLock) {
         // Going backwards, to clean up deepest depth tasks first, giving other tasks a chance to finish during cleanup
-        for (int i = perProcessorExecutorServices.size() - 1; i >= 0; --i) {
+        for (int i = perProcessorExecutorServices.size() - 1; i >= 0; i--) {
           final int index = i;
           final ExecutorServiceWrapper ppes = perProcessorExecutorServices.get(index);
           if (ppes != null) {
@@ -1357,7 +1357,7 @@ public class Executors implements AutoCloseable {
       command.run();
     }
 
-    private static final ThreadFactory sequentialThreadFactory = r -> {
+    private static final ThreadFactory sequentialThreadFactory = (Runnable r) -> {
       throw new IllegalStateException("No threads should be created by the sequential executor");
     };
 
