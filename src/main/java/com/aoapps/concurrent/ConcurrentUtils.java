@@ -43,8 +43,9 @@ public final class ConcurrentUtils {
 
   /**
    * Waits for all futures to complete, discarding any results.
-   *
+   * <p>
    * Note: This method is cloned to IntegerRadixSort.java to avoid package dependency.
+   * </p>
    */
   public static void waitForAll(Iterable<? extends Future<?>> futures) throws InterruptedException, ExecutionException {
     for (Future<?> future : futures) {

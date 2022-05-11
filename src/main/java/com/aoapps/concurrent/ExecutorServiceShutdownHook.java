@@ -29,16 +29,15 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * <p>
  * The threads of executor services can cause a JVM to keep running if they are not
  * daemon threads.  Additionally, daemon threads can be interrupted by an unclean
  * shutdown if no shutdown hook is provided.  By using this implementation of a
  * shutdown hook you get the best of both - threads stop at the correct time, not
  * too soon and not too late.
- * </p>
  *
  * @author  AO Industries, Inc.
  */
+// TODO: 5.0.0: Make package-private
 public class ExecutorServiceShutdownHook extends Thread {
 
   private static final Logger logger = Logger.getLogger(ExecutorServiceShutdownHook.class.getName());
@@ -58,18 +57,30 @@ public class ExecutorServiceShutdownHook extends Thread {
   private final long shutdownTimeout;
   private final TimeUnit shutdownTimeoutUnit;
 
+  /**
+   * Creates a new shutdown hook.
+   */
   public ExecutorServiceShutdownHook(ExecutorService executorService) {
     this(executorService, DEFAULT_THREAD_NAME, DEFAULT_SHUTDOWN_TIMEOUT, DEFAULT_SHUTDOWN_TIMEUNIT);
   }
 
+  /**
+   * Creates a new shutdown hook.
+   */
   public ExecutorServiceShutdownHook(ExecutorService executorService, long shutdownTimeout, TimeUnit shutdownTimeoutUnit) {
     this(executorService, DEFAULT_THREAD_NAME, shutdownTimeout, shutdownTimeoutUnit);
   }
 
+  /**
+   * Creates a new shutdown hook.
+   */
   public ExecutorServiceShutdownHook(ExecutorService executorService, String threadName) {
     this(executorService, threadName, DEFAULT_SHUTDOWN_TIMEOUT, DEFAULT_SHUTDOWN_TIMEUNIT);
   }
 
+  /**
+   * Creates a new shutdown hook.
+   */
   public ExecutorServiceShutdownHook(ExecutorService executorService, String threadName, long shutdownTimeout, TimeUnit shutdownTimeoutUnit) {
     super(threadName);
     this.executorService = executorService;

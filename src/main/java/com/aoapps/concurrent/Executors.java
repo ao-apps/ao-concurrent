@@ -145,6 +145,8 @@ public class Executors implements AutoCloseable {
   private static final AtomicInteger activeCount = new AtomicInteger();
 
   /**
+   * Creates a new executors.
+   *
    * @deprecated  Just use constructor directly.  Subclasses are now allowed, too.
    */
   @Deprecated
@@ -314,7 +316,7 @@ public class Executors implements AutoCloseable {
     final ExecutorService executorService;
 
     /**
-     * Shutdown hook is created, but not submitted
+     * Shutdown hook is created, but not submitted.
      */
     private final Thread shutdownHook;
 
@@ -369,6 +371,7 @@ public class Executors implements AutoCloseable {
     private static class IncompleteLock {
       // Empty lock class to help heap profile
     }
+
     private final IncompleteLock incompleteLock = new IncompleteLock();
     private boolean canceled;
     private IncompleteFuture<V> future; // Only available once submitted
@@ -698,6 +701,8 @@ public class Executors implements AutoCloseable {
     protected abstract SimpleExecutorService getExecutorService();
 
     /**
+     * Wraps the given callable.
+     *
      * @see  ExecutorService#wrap(java.util.concurrent.Callable)
      */
     protected <T> Callable<T> wrap(Callable<T> task) {
@@ -705,6 +710,8 @@ public class Executors implements AutoCloseable {
     }
 
     /**
+     * Wraps the given runnable.
+     *
      * @see  ExecutorService#wrap(java.lang.Runnable)
      */
     protected Runnable wrap(Runnable task) {
@@ -951,7 +958,7 @@ public class Executors implements AutoCloseable {
     }
 
     /**
-     * Avoid deadlock: Maintain which perProcessor thread pool this task came from
+     * Avoid deadlock: Maintain which perProcessor thread pool this task came from.
      */
     @Override
     protected <T> Callable<T> wrap(Callable<T> task) {
@@ -959,7 +966,7 @@ public class Executors implements AutoCloseable {
     }
 
     /**
-     * Avoid deadlock: Maintain which perProcessor thread pool this task came from
+     * Avoid deadlock: Maintain which perProcessor thread pool this task came from.
      */
     @Override
     protected Runnable wrap(Runnable task) {
@@ -1037,6 +1044,7 @@ public class Executors implements AutoCloseable {
     private static class PerProcessorExecutorServicesLock {
       // Empty lock class to help heap profile
     }
+
     private static final PerProcessorExecutorServicesLock perProcessorExecutorServicesLock = new PerProcessorExecutorServicesLock();
     private static final List<ExecutorServiceWrapper> perProcessorExecutorServices = new ArrayList<>();
 
@@ -1087,16 +1095,16 @@ public class Executors implements AutoCloseable {
     @Override
     ThreadFactory getThreadFactory() {
       int index;
-      {
-        Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
-        if (logger.isLoggable(Level.FINEST)) {
-          logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
+        {
+          Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
+          if (logger.isLoggable(Level.FINEST)) {
+            logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
+          }
+          index = (perProcessorIndex == null) ? 0 : (perProcessorIndex + 1);
+          if (logger.isLoggable(Level.FINEST)) {
+            logger.log(Level.FINEST, "index={0}", index);
+          }
         }
-        index = (perProcessorIndex == null) ? 0 : (perProcessorIndex + 1);
-        if (logger.isLoggable(Level.FINEST)) {
-          logger.log(Level.FINEST, "index={0}", index);
-        }
-      }
       return getThreadFactory(index);
     }
 
@@ -1104,16 +1112,16 @@ public class Executors implements AutoCloseable {
     protected SimpleExecutorService getExecutorService() {
       assert activeCount.get() > 0;
       int index;
-      {
-        Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
-        if (logger.isLoggable(Level.FINEST)) {
-          logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
+        {
+          Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
+          if (logger.isLoggable(Level.FINEST)) {
+            logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
+          }
+          index = (perProcessorIndex == null) ? 0 : (perProcessorIndex + 1);
+          if (logger.isLoggable(Level.FINEST)) {
+            logger.log(Level.FINEST, "index={0}", index);
+          }
         }
-        index = (perProcessorIndex == null) ? 0 : (perProcessorIndex + 1);
-        if (logger.isLoggable(Level.FINEST)) {
-          logger.log(Level.FINEST, "index={0}", index);
-        }
-      }
       synchronized (perProcessorExecutorServicesLock) {
         ExecutorServiceWrapper perProcessorExecutorService = index < perProcessorExecutorServices.size() ? perProcessorExecutorServices.get(index) : null;
         if (perProcessorExecutorService == null) {
@@ -1207,6 +1215,7 @@ public class Executors implements AutoCloseable {
       private static class Lock {
         // Empty lock class to help heap profile
       }
+
       private final Lock lock = new Lock();
       private final Callable<V> task;
       private final UnboundedExecutor unboundedExecutor;
@@ -1217,6 +1226,8 @@ public class Executors implements AutoCloseable {
       private Throwable exception;
 
       /**
+       * Creates a new sequential future.
+       *
        * @param unboundedExecutor  Only used for get timeout implementation.
        */
       private SequentialFuture(
@@ -1306,6 +1317,8 @@ public class Executors implements AutoCloseable {
       }
 
       /**
+       * {@inheritDoc}
+       *
        * @see  #getUnbounded()  Delegates to unboundedExecutor to provide timeout functionality.
        */
       @Override

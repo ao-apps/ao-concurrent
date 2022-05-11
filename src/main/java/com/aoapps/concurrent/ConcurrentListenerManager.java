@@ -45,6 +45,9 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
 
   private static final Logger logger = Logger.getLogger(ConcurrentListenerManager.class.getName());
 
+  /**
+   * The event callback.
+   */
   @FunctionalInterface
   public static interface Event<L> {
     /**

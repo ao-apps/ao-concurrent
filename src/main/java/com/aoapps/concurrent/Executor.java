@@ -30,6 +30,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 /**
+ * Extends {@link java.util.concurrent.Executor} with additional features.
+ *
  * @see  Executors#getUnbounded()
  * @see  Executors#getPerProcessor()
  */
@@ -51,9 +53,9 @@ public interface Executor extends java.util.concurrent.Executor {
    * Calls all of the tasks concurrently, waiting for them to all complete.
    * If there is only one task, it is called on the current thread.
    * Rather than just have the current thread waiting, the last task is called by the current thread.
-   * 
+   *
    * @param  tasks  Only iterated once in this implementation
-   * 
+   *
    * @see  Executors#wrap(java.util.concurrent.Callable)
    *
    * @exception  IllegalStateException  if already closed.
@@ -62,7 +64,7 @@ public interface Executor extends java.util.concurrent.Executor {
 
   /**
    * Submits to the executor after the provided delay.
-   * 
+   *
    * @see  Executors#wrap(java.util.concurrent.Callable)
    *
    * @exception  IllegalStateException  if already closed.
@@ -92,9 +94,9 @@ public interface Executor extends java.util.concurrent.Executor {
    * Runs all of the tasks concurrently, waiting for them to all complete.
    * If there is only one task, it is ran on the current thread.
    * Rather than just have the current thread waiting, the last task is ran by the current thread.
-   * 
+   *
    * @param  tasks  Only iterated once in this implementation
-   * 
+   *
    * @see  Executors#wrap(java.lang.Runnable)
    *
    * @exception  IllegalStateException  if already closed.
@@ -104,7 +106,7 @@ public interface Executor extends java.util.concurrent.Executor {
   /**
    * Submits to the executor after the provided delay,
    * returning the provided value on success.
-   * 
+   *
    * @see  Executors#wrap(java.lang.Runnable)
    *
    * @exception  IllegalStateException  if already closed.
@@ -113,7 +115,7 @@ public interface Executor extends java.util.concurrent.Executor {
 
   /**
    * Submits to the executor after the provided delay.
-   * 
+   *
    * @see  Executors#wrap(java.lang.Runnable)
    *
    * @exception  IllegalStateException  if already closed.
