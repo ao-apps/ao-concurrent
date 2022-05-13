@@ -29,4 +29,4 @@ module com.aoapps.concurrent {
   requires org.apache.commons.lang3; // <groupId>org.apache.commons</groupId><artifactId>commons-lang3</artifactId>
   // Java SE
   requires java.logging;
-} // TODO: Avoiding rewrite-maven-plugin-4.22.2 truncation
+}
