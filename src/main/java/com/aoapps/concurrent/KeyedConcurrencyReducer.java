@@ -56,75 +56,91 @@ public class KeyedConcurrencyReducer<K, R> {
    *   <li>Threads A and B both return the results obtained only by Thread A</li>
    * </ol>
    */
-  @SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
+  @SuppressWarnings({"UseSpecificCatch", "TooBroadCatch", "NestedSynchronizedStatement"})
   public R executeSerialized(K key, Callable<? extends R> callable) throws InterruptedException, ExecutionException {
-    final boolean isFirstThread;
     final ResultsCache<R> resultsCache;
+    final boolean isFirstThread;
+    final boolean isFinished;
+    R result;
+    Throwable throwable;
     synchronized (executeSerializedStatus) {
       // Look for any existing entry for this key
-      ResultsCache<R> resultsCacheT = executeSerializedStatus.get(key);
-      if (resultsCacheT == null) {
-        executeSerializedStatus.put(key, resultsCacheT = new ResultsCache<>());
+      ResultsCache<R> resultsCacheTmp = executeSerializedStatus.get(key);
+      if (resultsCacheTmp == null) {
+        executeSerializedStatus.put(key, resultsCacheTmp = new ResultsCache<>());
       }
-      resultsCache = resultsCacheT;
-      isFirstThread = resultsCache.threadCount == 0;
-      if (resultsCache.threadCount == Integer.MAX_VALUE) {
-        throw new IllegalStateException("threadCount == Integer.MAX_VALUE");
-      }
-      resultsCache.threadCount++;
-      if (isFirstThread) {
-        resultsCache.finished = false;
-      }
-    }
-    try {
-      R result;
-      Throwable throwable;
-      if (isFirstThread) {
-        // Invoke outside resultsCache lock, so other threads can wait
-        try {
-          result = callable.call();
-          throwable = null;
-        } catch (Throwable t) {
-          result = null;
-          throwable = t;
-        }
-        synchronized (resultsCache) {
-          assert !resultsCache.finished;
-          resultsCache.result = result;
-          resultsCache.throwable = throwable;
-          resultsCache.finished = true;
-          resultsCache.notifyAll();
-        }
-      } else {
-        synchronized (resultsCache) {
-          // Wait for results from the first thread, including any exception
-          while (!resultsCache.finished) {
-            resultsCache.wait();
-          }
-          assert resultsCache.finished;
+      resultsCache = resultsCacheTmp;
+      synchronized (resultsCache) {
+        isFirstThread = resultsCache.threadCount == 0;
+        if (!isFirstThread && resultsCache.finished) {
+          // Result is already available
+          isFinished = true;
           result = resultsCache.result;
           throwable = resultsCache.throwable;
-        }
-      }
-      if (throwable != null) {
-        if (isFirstThread && throwable instanceof ThreadDeath) {
-          // Propagate directly back to first thread
-          throw (ThreadDeath) throwable;
-        }
-        throw new ExecutionException(resultsCache.throwable);
-      }
-      return result;
-    } finally {
-      synchronized (executeSerializedStatus) {
-        assert resultsCache.threadCount > 0;
-        resultsCache.threadCount--;
-        if (resultsCache.threadCount == 0) {
-          resultsCache.finished = false;
-          resultsCache.result = null;
-          resultsCache.throwable = null;
-          executeSerializedStatus.remove(key);
+        } else if (resultsCache.threadCount == Integer.MAX_VALUE) {
+          throw new IllegalStateException("threadCount == Integer.MAX_VALUE");
+        } else {
+          isFinished = false;
+          result = null;
+          throwable = null;
+          resultsCache.threadCount++;
+          if (isFirstThread) {
+            resultsCache.finished = false;
+          }
         }
       }
     }
+    if (!isFinished) {
+      try {
+        if (isFirstThread) {
+          // Invoke outside resultsCache lock, so other threads can wait
+          try {
+            result = callable.call();
+            assert throwable == null;
+          } catch (Throwable t) {
+            assert result == null;
+            throwable = t;
+          }
+          synchronized (resultsCache) {
+            assert !resultsCache.finished;
+            resultsCache.result = result;
+            resultsCache.throwable = throwable;
+            resultsCache.finished = true;
+            resultsCache.notifyAll();
+          }
+        } else {
+          synchronized (resultsCache) {
+            // Wait for results from the first thread, including any exception
+            while (!resultsCache.finished) {
+              resultsCache.wait();
+            }
+            assert resultsCache.finished;
+            result = resultsCache.result;
+            throwable = resultsCache.throwable;
+          }
+        }
+      } finally {
+        synchronized (executeSerializedStatus) {
+          synchronized (resultsCache) {
+            assert resultsCache.threadCount > 0;
+            resultsCache.threadCount--;
+            if (resultsCache.threadCount == 0) {
+              resultsCache.finished = false;
+              resultsCache.result = null;
+              resultsCache.throwable = null;
+              executeSerializedStatus.remove(key);
+            }
+          }
+        }
+      }
+    }
+    if (throwable != null) {
+      if (isFirstThread && throwable instanceof ThreadDeath) {
+        // Propagate directly back to first thread
+        throw (ThreadDeath) throwable;
+      }
+      throw new ExecutionException(throwable);
+    }
+    return result;
   }
 }

@@ -64,64 +64,76 @@ public class ConcurrencyReducer<R> {
   @SuppressWarnings({"UseSpecificCatch", "TooBroadCatch"})
   public R executeSerialized(Callable<? extends R> callable) throws InterruptedException, ExecutionException {
     final boolean isFirstThread;
+    final boolean isFinished;
+    R result;
+    Throwable throwable;
     synchronized (resultsCache) {
       isFirstThread = resultsCache.threadCount == 0;
-      if (resultsCache.threadCount == Integer.MAX_VALUE) {
+      if (!isFirstThread && resultsCache.finished) {
+        // Result is already available
+        isFinished = true;
+        result = resultsCache.result;
+        throwable = resultsCache.throwable;
+      } else if (resultsCache.threadCount == Integer.MAX_VALUE) {
         throw new IllegalStateException("threadCount == Integer.MAX_VALUE");
-      }
-      resultsCache.threadCount++;
-      if (isFirstThread) {
-        resultsCache.finished = false;
-      }
-    }
-    try {
-      R result;
-      Throwable throwable;
-      if (isFirstThread) {
-        // Invoke outside resultsCache lock, so other threads can wait
-        try {
-          result = callable.call();
-          throwable = null;
-        } catch (Throwable t) {
-          result = null;
-          throwable = t;
-        }
-        synchronized (resultsCache) {
-          assert !resultsCache.finished;
-          resultsCache.result = result;
-          resultsCache.throwable = throwable;
-          resultsCache.finished = true;
-          resultsCache.notifyAll();
-        }
       } else {
-        synchronized (resultsCache) {
-          // Wait for results from the first thread, including any exception
-          while (!resultsCache.finished) {
-            resultsCache.wait();
-          }
-          assert resultsCache.finished;
-          result = resultsCache.result;
-          throwable = resultsCache.throwable;
-        }
-      }
-      if (throwable != null) {
-        if (isFirstThread && throwable instanceof ThreadDeath) {
-          // Propagate directly back to first thread
-          throw (ThreadDeath) throwable;
-        }
-        throw new ExecutionException(resultsCache.throwable);
-      }
-      return result;
-    } finally {
-      synchronized (resultsCache) {
-        assert resultsCache.threadCount > 0;
-        resultsCache.threadCount--;
-        if (resultsCache.threadCount == 0) {
+        isFinished = false;
+        result = null;
+        throwable = null;
+        resultsCache.threadCount++;
+        if (isFirstThread) {
           resultsCache.finished = false;
-          resultsCache.result = null;
-          resultsCache.throwable = null;
         }
       }
     }
+    if (!isFinished) {
+      try {
+        if (isFirstThread) {
+          // Invoke outside resultsCache lock, so other threads can wait
+          try {
+            result = callable.call();
+            assert throwable == null;
+          } catch (Throwable t) {
+            assert result == null;
+            throwable = t;
+          }
+          synchronized (resultsCache) {
+            assert !resultsCache.finished;
+            resultsCache.result = result;
+            resultsCache.throwable = throwable;
+            resultsCache.finished = true;
+            resultsCache.notifyAll();
+          }
+        } else {
+          synchronized (resultsCache) {
+            // Wait for results from the first thread, including any exception
+            while (!resultsCache.finished) {
+              resultsCache.wait();
+            }
+            assert resultsCache.finished;
+            result = resultsCache.result;
+            throwable = resultsCache.throwable;
+          }
+        }
+      } finally {
+        synchronized (resultsCache) {
+          assert resultsCache.threadCount > 0;
+          resultsCache.threadCount--;
+          if (resultsCache.threadCount == 0) {
+            resultsCache.finished = false;
+            resultsCache.result = null;
+            resultsCache.throwable = null;
+          }
+        }
+      }
+    }
+    if (throwable != null) {
+      if (isFirstThread && throwable instanceof ThreadDeath) {
+        // Propagate directly back to first thread
+        throw (ThreadDeath) throwable;
+      }
+      throw new ExecutionException(throwable);
+    }
+    return result;
   }
 }
