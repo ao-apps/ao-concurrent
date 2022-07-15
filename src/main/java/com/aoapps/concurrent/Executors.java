@@ -333,7 +333,7 @@ public class Executors implements AutoCloseable {
       try {
         Runtime.getRuntime().addShutdownHook(newShutdownHook);
       } catch (SecurityException e) {
-        logger.log(Level.WARNING, null, e);
+        logger.log(Level.FINE, null, e);
         newShutdownHook = null;
       }
       shutdownHook = newShutdownHook;
