@@ -325,6 +325,7 @@ public class Executors implements AutoCloseable {
         String shutdownHookThreadName
     ) {
       this.executorService = executorService;
+      logger.log(Level.FINE, "Registering shutdown hook");
       Thread newShutdownHook = new ExecutorServiceShutdownHook(
           executorService,
           shutdownHookThreadName
@@ -332,8 +333,11 @@ public class Executors implements AutoCloseable {
       // Only keep instances once shutdown hook properly registered
       try {
         Runtime.getRuntime().addShutdownHook(newShutdownHook);
+      } catch (IllegalArgumentException | IllegalStateException e) {
+        logger.log(Level.WARNING, "Failed to add shutdown hook", e);
+        newShutdownHook = null;
       } catch (SecurityException e) {
-        logger.log(Level.FINE, null, e);
+        logger.log(Level.FINE, "Shutdown hook not allowed", e);
         newShutdownHook = null;
       }
       shutdownHook = newShutdownHook;
@@ -341,12 +345,13 @@ public class Executors implements AutoCloseable {
 
     void removeShutdownHook() {
       if (shutdownHook != null) {
+        logger.log(Level.FINE, "Removing shutdown hook");
         try {
           Runtime.getRuntime().removeShutdownHook(shutdownHook);
         } catch (IllegalStateException e) {
           // System shutting down, can't remove hook
         } catch (SecurityException e) {
-          logger.log(Level.WARNING, null, e);
+          logger.log(Level.WARNING, "Failed to remove shutdown hook", e);
         }
       }
     }
