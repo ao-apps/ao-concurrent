@@ -105,6 +105,7 @@ public class Executors implements AutoCloseable {
   private static class PrefixThreadFactory implements ThreadFactory {
 
     // The thread group management was not compatible with an Applet environment
+    // Java 19: java.lang.ThreadGroup Is Degraded, see https://bugs.openjdk.org/browse/JDK-8284161
     // final ThreadGroup group;
     final String namePrefix;
     final AtomicInteger threadNumber = new AtomicInteger(1);
