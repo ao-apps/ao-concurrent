@@ -28,6 +28,8 @@ import com.aoapps.hodgepodge.i18n.I18nThreadLocalRunnable;
 import com.aoapps.lang.RuntimeUtils;
 import com.aoapps.lang.concurrent.ThreadLocalCallable;
 import com.aoapps.lang.concurrent.ThreadLocalRunnable;
+import com.aoapps.lang.util.AtomicSequence;
+import com.aoapps.lang.util.Sequence;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -161,6 +163,16 @@ public class Executors implements AutoCloseable {
   private final AtomicBoolean closed = new AtomicBoolean();
 
   /**
+   * Generates instance IDs.
+   */
+  private static final Sequence idSequence = new AtomicSequence(0);
+
+  /**
+   * The ID of this current instance.  Could be repeated in a 64-bit wraparound.
+   */
+  private final long id = idSequence.getNextSequenceValue();
+
+  /**
    * <p>
    * Create a new instance of the executor service.  {@link #close()} must be called
    * when done with the instance.  This should be done in a try-with-resources, try-finally, or strong
@@ -185,11 +197,16 @@ public class Executors implements AutoCloseable {
       throw new IllegalStateException("activeCount integer wraparound detected");
     }
     if (logger.isLoggable(Level.FINE)) {
-      logger.log(Level.FINE, "activeCount={0}", newActiveCount);
+      logger.log(Level.FINE, "id={0}, activeCount={1}", new Object[] {id, newActiveCount});
     }
     perProcessor = new PerProcessorExecutor(this);
   }
   // </editor-fold>
+
+  @Override
+  public String toString() {
+    return Executors.class.getName() + '[' + id + ']';
+  }
 
   // <editor-fold defaultstate="collapsed" desc="Preferred Concurrency">
   private final int preferredConcurrency;
@@ -252,10 +269,10 @@ public class Executors implements AutoCloseable {
    * Keeps track of all tasks scheduled but not yet completed by this executor so the tasks
    * may be completed or canceled during close.
    */
-  private static final AtomicLong nextIncompleteFutureId = new AtomicLong(1);
-  private static final ConcurrentMap<Long, ThreadFactoryFuture<?>> incompleteFutures = new ConcurrentHashMap<>();
+  private final AtomicLong nextIncompleteFutureId = new AtomicLong(1);
+  private final ConcurrentMap<Long, ThreadFactoryFuture<?>> incompleteFutures = new ConcurrentHashMap<>();
 
-  private static class IncompleteFuture<V> implements ThreadFactoryFuture<V> {
+  private class IncompleteFuture<V> implements ThreadFactoryFuture<V> {
 
     private final ThreadFactory threadFactory;
     private final Long incompleteFutureId;
@@ -370,6 +387,7 @@ public class Executors implements AutoCloseable {
 
   private abstract static class IncompleteTimerTask<V> extends TimerTask implements ThreadFactoryFuture<V> {
 
+    protected final Executors executors;
     protected final ThreadFactory threadFactory;
     protected final SimpleExecutorService executorService;
     protected final Long incompleteFutureId;
@@ -383,10 +401,12 @@ public class Executors implements AutoCloseable {
     private IncompleteFuture<V> future; // Only available once submitted
 
     private IncompleteTimerTask(
+        Executors executors,
         ThreadFactory threadFactory,
         SimpleExecutorService executorService,
         Long incompleteFutureId
     ) {
+      this.executors = executors;
       this.threadFactory = threadFactory;
       this.executorService = executorService;
       this.incompleteFutureId = incompleteFutureId;
@@ -422,7 +442,7 @@ public class Executors implements AutoCloseable {
         }
         return super.cancel();
       } finally {
-        incompleteFutures.remove(incompleteFutureId);
+        executors.incompleteFutures.remove(incompleteFutureId);
       }
     }
 
@@ -442,7 +462,7 @@ public class Executors implements AutoCloseable {
         }
         return f == null ? super.cancel() : f.cancel(mayInterruptIfRunning);
       } finally {
-        incompleteFutures.remove(incompleteFutureId);
+        executors.incompleteFutures.remove(incompleteFutureId);
       }
     }
 
@@ -517,7 +537,7 @@ public class Executors implements AutoCloseable {
   /**
    * Submits to the executor service.
    */
-  private static <T> IncompleteFuture<T> incompleteFutureSubmit(
+  private <T> IncompleteFuture<T> incompleteFutureSubmit(
       ThreadFactory threadFactory,
       SimpleExecutorService executorService,
       final Callable<? extends T> task
@@ -541,7 +561,7 @@ public class Executors implements AutoCloseable {
   /**
    * Submits to the executor service.
    */
-  private static <T> IncompleteFuture<T> incompleteFutureSubmit(
+  private <T> IncompleteFuture<T> incompleteFutureSubmit(
       ThreadFactory threadFactory,
       SimpleExecutorService executorService,
       final Runnable task,
@@ -569,12 +589,13 @@ public class Executors implements AutoCloseable {
     final Callable<? extends V> task;
 
     IncompleteCallableTimerTask(
+        Executors executors,
         ThreadFactory threadFactory,
         SimpleExecutorService executorService,
         Long incompleteFutureId,
         Callable<? extends V> task
     ) {
-      super(threadFactory, executorService, incompleteFutureId);
+      super(executors, threadFactory, executorService, incompleteFutureId);
       this.task = task;
     }
 
@@ -585,9 +606,9 @@ public class Executors implements AutoCloseable {
     public void run() {
       try {
         try {
-          setFuture(incompleteFutureSubmit(threadFactory, executorService, task));
+          setFuture(executors.incompleteFutureSubmit(threadFactory, executorService, task));
         } finally {
-          incompleteFutures.remove(incompleteFutureId);
+          executors.incompleteFutures.remove(incompleteFutureId);
         }
       } catch (ThreadDeath td) {
         throw td;
@@ -607,13 +628,14 @@ public class Executors implements AutoCloseable {
     final T result;
 
     IncompleteRunnableTimerTask(
+        Executors executors,
         ThreadFactory threadFactory,
         SimpleExecutorService executorService,
         Long incompleteFutureId,
         Runnable task,
         T result
     ) {
-      super(threadFactory, executorService, incompleteFutureId);
+      super(executors, threadFactory, executorService, incompleteFutureId);
       this.task = task;
       this.result = result;
     }
@@ -625,9 +647,9 @@ public class Executors implements AutoCloseable {
     public void run() {
       try {
         try {
-          setFuture(incompleteFutureSubmit(threadFactory, executorService, task, result));
+          setFuture(executors.incompleteFutureSubmit(threadFactory, executorService, task, result));
         } finally {
-          incompleteFutures.remove(incompleteFutureId);
+          executors.incompleteFutures.remove(incompleteFutureId);
         }
       } catch (ThreadDeath td) {
         throw td;
@@ -644,14 +666,14 @@ public class Executors implements AutoCloseable {
   /**
    * Adds to the timer.
    */
-  private static <T> Future<T> incompleteFutureSubmit(
+  private <T> Future<T> incompleteFutureSubmit(
       ThreadFactory threadFactory,
       SimpleExecutorService executorService,
       Callable<? extends T> task,
       long delay
   ) {
     final Long incompleteFutureId = nextIncompleteFutureId.getAndIncrement();
-    IncompleteCallableTimerTask<T> timerTask = new IncompleteCallableTimerTask<>(threadFactory, executorService, incompleteFutureId, task);
+    IncompleteCallableTimerTask<T> timerTask = new IncompleteCallableTimerTask<>(this, threadFactory, executorService, incompleteFutureId, task);
     getTimer().schedule(timerTask, delay);
     incompleteFutures.put(incompleteFutureId, timerTask);
     return timerTask;
@@ -660,7 +682,7 @@ public class Executors implements AutoCloseable {
   /**
    * Adds to the timer.
    */
-  private static <T> Future<T> incompleteFutureSubmit(
+  private <T> Future<T> incompleteFutureSubmit(
       ThreadFactory threadFactory,
       SimpleExecutorService executorService,
       Runnable task,
@@ -668,7 +690,7 @@ public class Executors implements AutoCloseable {
       long delay
   ) {
     final Long incompleteFutureId = nextIncompleteFutureId.getAndIncrement();
-    IncompleteRunnableTimerTask<T> timerTask = new IncompleteRunnableTimerTask<>(threadFactory, executorService, incompleteFutureId, task, result);
+    IncompleteRunnableTimerTask<T> timerTask = new IncompleteRunnableTimerTask<>(this, threadFactory, executorService, incompleteFutureId, task, result);
     getTimer().schedule(timerTask, delay);
     incompleteFutures.put(incompleteFutureId, timerTask);
     return timerTask;
@@ -749,7 +771,7 @@ public class Executors implements AutoCloseable {
       if (executors.closed.get()) {
         throw new IllegalStateException();
       }
-      return incompleteFutureSubmit(
+      return executors.incompleteFutureSubmit(
           getThreadFactory(),
           getExecutorService(),
           wrap(task)
@@ -815,7 +837,7 @@ public class Executors implements AutoCloseable {
       if (executors.closed.get()) {
         throw new IllegalStateException();
       }
-      return incompleteFutureSubmit(
+      return executors.incompleteFutureSubmit(
           getThreadFactory(),
           getExecutorService(),
           wrap(task),
@@ -828,7 +850,7 @@ public class Executors implements AutoCloseable {
       if (executors.closed.get()) {
         throw new IllegalStateException();
       }
-      return incompleteFutureSubmit(
+      return executors.incompleteFutureSubmit(
           getThreadFactory(),
           getExecutorService(),
           wrap(task),
@@ -896,7 +918,7 @@ public class Executors implements AutoCloseable {
       if (executors.closed.get()) {
         throw new IllegalStateException();
       }
-      return incompleteFutureSubmit(
+      return executors.incompleteFutureSubmit(
           getThreadFactory(),
           getExecutorService(),
           wrap(task),
@@ -1594,44 +1616,47 @@ public class Executors implements AutoCloseable {
         if (ownThreadFactoryWaitFutures != null && !Thread.currentThread().isInterrupted()) {
           final List<ThreadFactoryFuture<?>> waitOnOtherThreads = ownThreadFactoryWaitFutures;
           // Cancel all from our thread factory on a different thread to avoid deadlock
-          new Thread(() -> {
-            for (int i = 0, size = waitOnOtherThreads.size(); i < size; i++) {
-              ThreadFactoryFuture<?> future = waitOnOtherThreads.get(i);
-              long nanosRemaining = waitUntil - System.nanoTime();
-              if (nanosRemaining >= 0) {
-                if (logger.isLoggable(Level.FINE)) {
-                  logger.log(
-                      Level.FINE,
-                      "Waiting on waitOnOtherThreads[{0}], {1} ns remaining",
-                      new Object[]{
-                          i,
-                          nanosRemaining
-                      }
-                  );
+          new Thread(
+              () -> {
+                for (int i = 0, size = waitOnOtherThreads.size(); i < size; i++) {
+                  ThreadFactoryFuture<?> future = waitOnOtherThreads.get(i);
+                  long nanosRemaining = waitUntil - System.nanoTime();
+                  if (nanosRemaining >= 0) {
+                    if (logger.isLoggable(Level.FINE)) {
+                      logger.log(
+                          Level.FINE,
+                          "Waiting on waitOnOtherThreads[{0}], {1} ns remaining",
+                          new Object[]{
+                              i,
+                              nanosRemaining
+                          }
+                      );
+                    }
+                    try {
+                      future.get(nanosRemaining, TimeUnit.NANOSECONDS);
+                    } catch (CancellationException | ExecutionException e) {
+                      // OK on shutdown
+                    } catch (InterruptedException e) {
+                      // OK on shutdown
+                      // Restore the interrupted status
+                      Thread.currentThread().interrupt();
+                      break;
+                    } catch (TimeoutException e) {
+                      // Cancel after timeout
+                      //logger.log(Level.WARNING, null, e);
+                      future.cancel(true);
+                    }
+                  } else {
+                    // No time remaining, just cancel
+                    if (logger.isLoggable(Level.FINE)) {
+                      logger.log(Level.FINE, "No time left, canceling waitOnOtherThreads[{0}]", i);
+                    }
+                    future.cancel(true);
+                  }
                 }
-                try {
-                  future.get(nanosRemaining, TimeUnit.NANOSECONDS);
-                } catch (CancellationException | ExecutionException e) {
-                  // OK on shutdown
-                } catch (InterruptedException e) {
-                  // OK on shutdown
-                  // Restore the interrupted status
-                  Thread.currentThread().interrupt();
-                  break;
-                } catch (TimeoutException e) {
-                  // Cancel after timeout
-                  //logger.log(Level.WARNING, null, e);
-                  future.cancel(true);
-                }
-              } else {
-                // No time remaining, just cancel
-                if (logger.isLoggable(Level.FINE)) {
-                  logger.log(Level.FINE, "No time left, canceling waitOnOtherThreads[{0}]", i);
-                }
-                future.cancel(true);
-              }
-            }
-          }).start();
+              },
+              this.toString() + ".close()"
+          ).start();
         }
       }
     }

@@ -37,7 +37,7 @@ along with ao-concurrent.  If not, see <https://www.gnu.org/licenses/>.
     shortTitle="Changelog"
     tocLevels="1"
     datePublished="2016-10-29T17:54:36-05:00"
-    dateModified="2022-11-06T21:31:27-06:00"
+    dateModified="2022-11-07T00:09:50-06:00"
   >
     <c:if test="${fn:endsWith('@{project.version}', '-SNAPSHOT') and !fn:endsWith('@{project.version}', '-POST-SNAPSHOT')}">
       <changelog:release
@@ -53,6 +53,9 @@ along with ao-concurrent.  If not, see <https://www.gnu.org/licenses/>.
           <li>Logging timer task errors instead of propagating and killing timer.</li>
           <li>Clearing thread interrupted state before returning to timer.</li>
           <li>Set a distinct timer thread name.</li>
+          <li>Executors implements a toString with a unique ID (with possible 64-bit overflow duplication) to help debugging.</li>
+          <li>Executors close thread is named to help debugging.</li>
+          <li>Fixed bug where all futures from all executors were canceled when any executor was closed.</li>
         </ul>
       </changelog:release>
     </c:if>
