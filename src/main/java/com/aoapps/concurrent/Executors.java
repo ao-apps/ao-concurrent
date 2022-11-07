@@ -789,6 +789,9 @@ public class Executors implements AutoCloseable {
 
     @Override
     public <T> Future<T> submit(Callable<? extends T> task, long delay) throws IllegalStateException {
+      if (delay <= 0) {
+        return submit(task);
+      }
       if (executors.closed.get()) {
         throw new IllegalStateException();
       }
@@ -867,6 +870,9 @@ public class Executors implements AutoCloseable {
 
     @Override
     public <T> Future<T> submit(Runnable task, T result, long delay) throws IllegalStateException {
+      if (delay <= 0) {
+        return submit(task, result);
+      }
       if (executors.closed.get()) {
         throw new IllegalStateException();
       }

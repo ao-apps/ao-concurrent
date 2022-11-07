@@ -65,6 +65,8 @@ public interface Executor extends java.util.concurrent.Executor {
   /**
    * Submits to the executor after the provided delay.
    *
+   * @param  delay  if less than zero, will use zero delay
+   *
    * @see  Executors#wrap(java.util.concurrent.Callable)
    *
    * @exception  IllegalStateException  if already closed.
@@ -107,6 +109,8 @@ public interface Executor extends java.util.concurrent.Executor {
    * Submits to the executor after the provided delay,
    * returning the provided value on success.
    *
+   * @param  delay  if less than zero, will use zero delay
+   *
    * @see  Executors#wrap(java.lang.Runnable)
    *
    * @exception  IllegalStateException  if already closed.
@@ -115,6 +119,8 @@ public interface Executor extends java.util.concurrent.Executor {
 
   /**
    * Submits to the executor after the provided delay.
+   *
+   * @param  delay  if less than zero, will use zero delay
    *
    * @see  Executors#wrap(java.lang.Runnable)
    *
