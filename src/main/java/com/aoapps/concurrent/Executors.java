@@ -584,9 +584,15 @@ public class Executors implements AutoCloseable {
     @Override
     public void run() {
       try {
-        setFuture(incompleteFutureSubmit(threadFactory, executorService, task));
-      } finally {
-        incompleteFutures.remove(incompleteFutureId);
+        try {
+          setFuture(incompleteFutureSubmit(threadFactory, executorService, task));
+        } finally {
+          incompleteFutures.remove(incompleteFutureId);
+        }
+      } catch (ThreadDeath td) {
+        throw td;
+      } catch (Throwable t) {
+        logger.log(Level.SEVERE, null, t);
       }
     }
   }
@@ -614,9 +620,15 @@ public class Executors implements AutoCloseable {
     @Override
     public void run() {
       try {
-        setFuture(incompleteFutureSubmit(threadFactory, executorService, task, result));
-      } finally {
-        incompleteFutures.remove(incompleteFutureId);
+        try {
+          setFuture(incompleteFutureSubmit(threadFactory, executorService, task, result));
+        } finally {
+          incompleteFutures.remove(incompleteFutureId);
+        }
+      } catch (ThreadDeath td) {
+        throw td;
+      } catch (Throwable t) {
+        logger.log(Level.SEVERE, null, t);
       }
     }
   }
