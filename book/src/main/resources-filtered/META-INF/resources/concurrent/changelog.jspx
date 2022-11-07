@@ -37,7 +37,7 @@ along with ao-concurrent.  If not, see <https://www.gnu.org/licenses/>.
     shortTitle="Changelog"
     tocLevels="1"
     datePublished="2016-10-29T17:54:36-05:00"
-    dateModified="2022-07-16T01:38:17-05:00"
+    dateModified="2022-11-06T21:31:27-06:00"
   >
     <c:if test="${fn:endsWith('@{project.version}', '-SNAPSHOT') and !fn:endsWith('@{project.version}', '-POST-SNAPSHOT')}">
       <changelog:release
@@ -52,6 +52,7 @@ along with ao-concurrent.  If not, see <https://www.gnu.org/licenses/>.
           <li>Accepting negative task submit delay, convert to zero.</li>
           <li>Logging timer task errors instead of propagating and killing timer.</li>
           <li>Clearing thread interrupted state before returning to timer.</li>
+          <li>Set a distinct timer thread name.</li>
         </ul>
       </changelog:release>
     </c:if>

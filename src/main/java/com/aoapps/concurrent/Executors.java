@@ -219,7 +219,7 @@ public class Executors implements AutoCloseable {
     assert activeCount.get() > 0;
     Timer t = timer.get();
     if (t == null) {
-      t = new Timer(DAEMON_THREADS);
+      t = new Timer(Executors.class.getName() + ".timer", DAEMON_THREADS);
       if (!timer.compareAndSet(null, t)) {
         // Another thread created one, cancel this one
         t.cancel();
