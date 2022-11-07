@@ -51,6 +51,7 @@ along with ao-concurrent.  If not, see <https://www.gnu.org/licenses/>.
         <ul>
           <li>Accepting negative task submit delay, convert to zero.</li>
           <li>Logging timer task errors instead of propagating and killing timer.</li>
+          <li>Clearing thread interrupted state before returning to timer.</li>
         </ul>
       </changelog:release>
     </c:if>

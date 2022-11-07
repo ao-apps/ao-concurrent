@@ -593,6 +593,10 @@ public class Executors implements AutoCloseable {
         throw td;
       } catch (Throwable t) {
         logger.log(Level.SEVERE, null, t);
+      } finally {
+        if (Thread.interrupted()) {
+          logger.log(Level.WARNING, "Cleared thread interrupted state before returning to timer");
+        }
       }
     }
   }
@@ -629,6 +633,10 @@ public class Executors implements AutoCloseable {
         throw td;
       } catch (Throwable t) {
         logger.log(Level.SEVERE, null, t);
+      } finally {
+        if (Thread.interrupted()) {
+          logger.log(Level.WARNING, "Cleared thread interrupted state before returning to timer");
+        }
       }
     }
   }
