@@ -13,14 +13,10 @@
 
 # Removed extraneous space at end of line.
 208534205c0ef088e2ac443323cc2d4f70bb6eeb
-
-# Whitespace updates to current standards.
-13f788203c48cb5d74a8f65e64bd753f5fb8102d
-
-# Removed extraneous space at end of line.
 832aa51fb417c4d32a7350c21a340e352c167845
 
 # Whitespace updates to current standards.
+13f788203c48cb5d74a8f65e64bd753f5fb8102d
 0804cbc0c89c913ea058b1f735171454abd109cc
 
 # Performed automatic source code clean-up with rewrite-maven-plugin
