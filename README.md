@@ -22,7 +22,7 @@ Concurrent programming utilities.
 * [Project Home](https://oss.aoapps.com/concurrent/)
 * [Changelog](https://oss.aoapps.com/concurrent/changelog)
 * [API Docs](https://oss.aoapps.com/concurrent/apidocs/)
-* [Maven Central Repository](https://search.maven.org/artifact/com.aoapps/ao-concurrent)
+* [Maven Central Repository](https://central.sonatype.com/search?namespace=com.aoapps&q=a%3Aao-concurrent)
 * [GitHub](https://github.com/ao-apps/ao-concurrent)
 
 ## Contact Us
