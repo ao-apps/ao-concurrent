@@ -30,7 +30,7 @@ along with ao-concurrent.  If not, see <https://www.gnu.org/licenses/>.
   </parent>
 
   <groupId>com.aoapps</groupId><artifactId>ao-concurrent</artifactId><version>4.0.5-POST-SNAPSHOT</version>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 
   <properties>
     <module.name>com.aoapps.concurrent</module.name>
