@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2013, 2015, 2016, 2019, 2020, 2021, 2022  AO Industries, Inc.
+ * Copyright (C) 2013, 2015, 2016, 2019, 2020, 2021, 2022, 2024  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -39,15 +39,13 @@ public class KeyedConcurrencyReducer<K, R> {
   private final Map<K, ResultsCache<R>> executeSerializedStatus = new HashMap<>();
 
   /**
-   * <p>
    * Executes a callable at most once for the given key.  If a callable is
    * in the process of being executed by a different thread (determined by key,
    * not the callable instance), the current thread will wait and use the
    * results obtained by the other thread.
-   * </p>
-   * <p>
-   * Consider the following scenario:
-   * </p>
+   *
+   * <p>Consider the following scenario:</p>
+   *
    * <ol>
    *   <li>Thread A invokes MySQL: "CHECK TABLE example FAST QUICK"</li>
    *   <li>Thread B invokes MySQL: "CHECK TABLE example FAST QUICK" before Thread A has finished</li>

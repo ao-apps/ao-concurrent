@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2011, 2012, 2013, 2014, 2015, 2016, 2019, 2020, 2021, 2022  AO Industries, Inc.
+ * Copyright (C) 2011, 2012, 2013, 2014, 2015, 2016, 2019, 2020, 2021, 2022, 2024  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -57,15 +57,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * <p>
  * Provides a central set of executors for use by any number of projects.
  * These executors use daemon threads and will not keep the JVM alive.
  * The executors are automatically shutdown using shutdown hooks.  The
  * executors are also immediately shutdown when the last instance is closed.
- * </p>
- * <p>
- * Also allows for delayed execution of tasks using an internal Timer.
- * </p>
+ *
+ * <p>Also allows for delayed execution of tasks using an internal Timer.</p>
  */
 public class Executors implements AutoCloseable {
 
@@ -83,11 +80,10 @@ public class Executors implements AutoCloseable {
 
   /**
    * The number of threads per processor for per-processor executor.
-   * <p>
-   * Note: Tried this at a value of one and did not benchmark any significant
+   *
+   * <p>Note: Tried this at a value of one and did not benchmark any significant
    * difference.  Favoring this as a multiple of CPU cores to be able to bully
-   * around lock contention or keep busy in the chance of occasional I/O.
-   * </p>
+   * around lock contention or keep busy in the chance of occasional I/O.</p>
    */
   private static final int THREADS_PER_PROCESSOR = 2;
 
@@ -173,15 +169,12 @@ public class Executors implements AutoCloseable {
   private final long id = idSequence.getNextSequenceValue();
 
   /**
-   * <p>
    * Create a new instance of the executor service.  {@link #close()} must be called
    * when done with the instance.  This should be done in a try-with-resources, try-finally, or strong
    * equivalent, such as <code>Servlet.destroy()</code>.
-   * </p>
-   * <p>
-   * Internally, threads are shared between executor instances.  The threads are only
-   * shutdown when the last executor is closed.
-   * </p>
+   *
+   * <p>Internally, threads are shared between executor instances.  The threads are only
+   * shutdown when the last executor is closed.</p>
    *
    * @see  #close()
    */
@@ -212,14 +205,11 @@ public class Executors implements AutoCloseable {
   private final int preferredConcurrency;
 
   /**
-   * <p>
    * Gets the preferred concurrency for this executor.  Does not change for the life
    * of the executor, but will be updated should the last executor be closed
    * and another created.
-   * </p>
-   * <p>
-   * This will always be {@code 1} on a single-CPU system, not a multiple of CPU count.
-   * </p>
+   *
+   * <p>This will always be {@code 1} on a single-CPU system, not a multiple of CPU count.</p>
    */
   public int getPreferredConcurrency() {
     return preferredConcurrency;
@@ -1045,18 +1035,14 @@ public class Executors implements AutoCloseable {
   private static class PerProcessorExecutor extends ExecutorImpl {
 
     /**
-     * <p>
      * {@code null} when a thread is not from this ExecutorService or is not yet per-processor pool bound.
-     * </p>
-     * <p>
-     * Keeps track of which per-processor thread pool the current thread is running
+     *
+     * <p>Keeps track of which per-processor thread pool the current thread is running
      * either directly, or indirect, under.  Any subsequent per-processor pool access
-     * will use the next higher pool index.
-     * </p>
-     * <p>
-     * A thread may be in both currentThreadUnbounded and currentThreadPerProcessorIndex, which will
-     * happen when an unbounded task is added from a per-processor thread.
-     * </p>
+     * will use the next higher pool index.</p>
+     *
+     * <p>A thread may be in both currentThreadUnbounded and currentThreadPerProcessorIndex, which will
+     * happen when an unbounded task is added from a per-processor thread.</p>
      */
     private static final ThreadLocal<Integer> currentThreadPerProcessorIndex = new ThreadLocal<>();
 
@@ -1228,30 +1214,24 @@ public class Executors implements AutoCloseable {
   private final PerProcessorExecutor perProcessor;
 
   /**
-   * <p>
    * An executor service that will execute at most two tasks per processor on
    * multi-CPU systems or one task on single-CPU systems.
-   * </p>
-   * <p>
-   * This should be used for CPU-bound tasks that generally operate non-blocking.
+   *
+   * <p>This should be used for CPU-bound tasks that generally operate non-blocking.
    * If a thread blocks or deadlocks, it can starve the system entirely - use this
    * cautiously.  For example, do not use it for things like disk I/O or network
    * I/O (including writes - they can block, too, once the network buffers are
-   * full).
-   * </p>
-   * <p>
-   * When a task is submitted by a thread that is already part of a per-processor executor,
+   * full).</p>
+   *
+   * <p>When a task is submitted by a thread that is already part of a per-processor executor,
    * it will be invoked on a different per-processor executor to avoid potential deadlock.
    * This means the total number of threads can exceed two tasks per processor, but it will
-   * remain bounded as a function of:
-   * </p>
-   * <pre>
-   * maxThreads = maxPerProcessorDepth * numProcessors * 2
-   * </pre>
-   * <p>
-   * Where maxPerProcessorDepth is a function of the number of times a per-processor task adds
-   * a per-processor task of its own.
-   * </p>
+   * remain bounded as a function of:</p>
+   *
+   * <pre>maxThreads = maxPerProcessorDepth * numProcessors * 2</pre>
+   *
+   * <p>Where maxPerProcessorDepth is a function of the number of times a per-processor task adds
+   * a per-processor task of its own.</p>
    *
    * @see  #getPreferredConcurrency()  to determine how many threads may be allocated per executor.
    */
@@ -1499,20 +1479,16 @@ public class Executors implements AutoCloseable {
   private final SequentialExecutor sequential = new SequentialExecutor(this);
 
   /**
-   * <p>
    * A sequential implementation of executor that performs no concurrent processing.
    * All tasks are performed on the thread calling {@link Future#get()}.
-   * </p>
-   * <p>
-   * <b>Important:</b> A task submitted to this
+   *
+   * <p><b>Important:</b> A task submitted to this
    * sequential executor is only processed when {@link Future#get()} is called.
    * Thus, a task submitted without a call to {@link Future#get()} is never
    * executed.  This is in stark contrast to other executors, which will
-   * complete the task regardless.
-   * </p>
-   * <p>
-   * <b>Note:</b> Timeout not implemented
-   * </p>
+   * complete the task regardless.</p>
+   *
+   * <p><b>Note:</b> Timeout not implemented</p>
    */
   public Executor getSequential() {
     return sequential;
@@ -1522,18 +1498,14 @@ public class Executors implements AutoCloseable {
 
   // <editor-fold defaultstate="collapsed" desc="AutoCloseable">
   /**
-   * <p>
    * Closes this executor service instance.  Once closed, no additional
    * tasks may be submitted.  Any overriding method must call super.close().
-   * </p>
-   * <p>
-   * If this is the last active executor, the underlying threads will also be shutdown.
+   *
+   * <p>If this is the last active executor, the underlying threads will also be shutdown.
    * This shutdown may wait up to <code>(1 + numPerProcessorPools) * CLOSE_WAIT_NANOS</code>
-   * for clean termination of all threads.
-   * </p>
-   * <p>
-   * If already closed, no action will be taken and no exception thrown.
-   * </p>
+   * for clean termination of all threads.</p>
+   *
+   * <p>If already closed, no action will be taken and no exception thrown.</p>
    *
    * @see  #CLOSE_WAIT_NANOS
    */
