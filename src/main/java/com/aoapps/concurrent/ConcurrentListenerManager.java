@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2014, 2015, 2019, 2020, 2021, 2022  AO Industries, Inc.
+ * Copyright (C) 2014, 2015, 2019, 2020, 2021, 2022, 2025  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -293,8 +293,7 @@ public class ConcurrentListenerManager<L> implements AutoCloseable {
         }
       }
       // This future will wait until unfinishedCalls is empty
-      // Java 9: new Future<>
-      return new Future<Object>() {
+      return new Future<>() {
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
           // Not supported
