@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2011, 2012, 2013, 2014, 2015, 2016, 2019, 2020, 2021, 2022, 2024  AO Industries, Inc.
+ * Copyright (C) 2011, 2012, 2013, 2014, 2015, 2016, 2019, 2020, 2021, 2022, 2024, 2025  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -1135,16 +1135,16 @@ public class Executors implements AutoCloseable {
     @Override
     ThreadFactory getThreadFactory() {
       int index;
-        {
-          Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
-          if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
-          }
-          index = (perProcessorIndex == null) ? 0 : (perProcessorIndex + 1);
-          if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "index={0}", index);
-          }
+      {
+        Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
+        if (logger.isLoggable(Level.FINEST)) {
+          logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
         }
+        index = (perProcessorIndex == null) ? 0 : (perProcessorIndex + 1);
+        if (logger.isLoggable(Level.FINEST)) {
+          logger.log(Level.FINEST, "index={0}", index);
+        }
+      }
       return getThreadFactory(index);
     }
 
@@ -1152,16 +1152,16 @@ public class Executors implements AutoCloseable {
     protected SimpleExecutorService getExecutorService() {
       assert activeCount.get() > 0;
       int index;
-        {
-          Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
-          if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
-          }
-          index = (perProcessorIndex == null) ? 0 : (perProcessorIndex + 1);
-          if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "index={0}", index);
-          }
+      {
+        Integer perProcessorIndex = currentThreadPerProcessorIndex.get();
+        if (logger.isLoggable(Level.FINEST)) {
+          logger.log(Level.FINEST, "perProcessorIndex={0}", perProcessorIndex);
         }
+        index = (perProcessorIndex == null) ? 0 : (perProcessorIndex + 1);
+        if (logger.isLoggable(Level.FINEST)) {
+          logger.log(Level.FINEST, "index={0}", index);
+        }
+      }
       synchronized (perProcessorExecutorServicesLock) {
         ExecutorServiceWrapper perProcessorExecutorService = index < perProcessorExecutorServices.size() ? perProcessorExecutorServices.get(index) : null;
         if (perProcessorExecutorService == null) {
