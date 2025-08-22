@@ -110,8 +110,8 @@ public class Executors implements AutoCloseable {
     final int priority;
 
     private PrefixThreadFactory(String namePrefix, int priority) {
-      //SecurityManager s = System.getSecurityManager();
-      //this.group = (s != null)? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+      // SecurityManager s = System.getSecurityManager();
+      // this.group = (s != null)? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
       this.namePrefix = namePrefix;
       this.priority = priority;
     }
@@ -123,7 +123,7 @@ public class Executors implements AutoCloseable {
         logger.log(Level.FINER, "newThread={0}", name);
       }
       Thread t = new Thread(
-          //group,
+          // group,
           () -> {
             currentThreadFactory.set(PrefixThreadFactory.this);
             target.run();
@@ -1573,7 +1573,7 @@ public class Executors implements AutoCloseable {
                 break;
               } catch (TimeoutException e) {
                 // Cancel after timeout
-                //logger.log(Level.WARNING, null, e);
+                // logger.log(Level.WARNING, null, e);
                 future.cancel(true);
               }
             } else {
@@ -1615,7 +1615,7 @@ public class Executors implements AutoCloseable {
                       break;
                     } catch (TimeoutException e) {
                       // Cancel after timeout
-                      //logger.log(Level.WARNING, null, e);
+                      // logger.log(Level.WARNING, null, e);
                       future.cancel(true);
                     }
                   } else {
