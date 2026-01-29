@@ -169,14 +169,14 @@ public class Executors implements AutoCloseable {
   private final long id = idSequence.getNextSequenceValue();
 
   /**
-   * Create a new instance of the executor service.  {@link #close()} must be called
+   * Create a new instance of the executor service.  {@link Executors#close()} must be called
    * when done with the instance.  This should be done in a try-with-resources, try-finally, or strong
    * equivalent, such as <code>Servlet.destroy()</code>.
    *
    * <p>Internally, threads are shared between executor instances.  The threads are only
    * shutdown when the last executor is closed.</p>
    *
-   * @see  #close()
+   * @see  Executors#close()
    */
   public Executors() {
     int availableProcessors = RuntimeUtils.getAvailableProcessors();
@@ -734,7 +734,7 @@ public class Executors implements AutoCloseable {
     /**
      * Gets the executor service.
      *
-     * @see  #getThreadFactory()  The executor must be using the same thread factory
+     * @see  ExecutorImpl#getThreadFactory()  The executor must be using the same thread factory
      */
     protected abstract SimpleExecutorService getExecutorService();
 
@@ -1233,7 +1233,7 @@ public class Executors implements AutoCloseable {
    * <p>Where maxPerProcessorDepth is a function of the number of times a per-processor task adds
    * a per-processor task of its own.</p>
    *
-   * @see  #getPreferredConcurrency()  to determine how many threads may be allocated per executor.
+   * @see  Executors#getPreferredConcurrency()  to determine how many threads may be allocated per executor.
    */
   public Executor getPerProcessor() {
     return perProcessor;
@@ -1353,7 +1353,7 @@ public class Executors implements AutoCloseable {
       /**
        * {@inheritDoc}
        *
-       * @see  #getUnbounded()  Delegates to unboundedExecutor to provide timeout functionality.
+       * @see  SequentialFuture#getUnbounded()  Delegates to unboundedExecutor to provide timeout functionality.
        */
       @Override
       public V get(long timeout, TimeUnit unit) throws InterruptedException, CancellationException, ExecutionException, TimeoutException {
@@ -1507,7 +1507,7 @@ public class Executors implements AutoCloseable {
    *
    * <p>If already closed, no action will be taken and no exception thrown.</p>
    *
-   * @see  #CLOSE_WAIT_NANOS
+   * @see  Executors#CLOSE_WAIT_NANOS
    */
   @Override
   public void close() {
