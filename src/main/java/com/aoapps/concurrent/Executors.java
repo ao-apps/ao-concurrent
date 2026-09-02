@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2011, 2012, 2013, 2014, 2015, 2016, 2019, 2020, 2021, 2022, 2024, 2025  AO Industries, Inc.
+ * Copyright (C) 2011, 2012, 2013, 2014, 2015, 2016, 2019, 2020, 2021, 2022, 2024, 2025, 2026  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -1171,7 +1171,7 @@ public class Executors implements AutoCloseable {
             logger.log(
                 Level.FINEST,
                 "new perProcessorExecutorService: index={0}, numThreads={1}",
-                new Object[]{
+                new Object[] {
                     index,
                     numThreads
                 }
@@ -1556,7 +1556,7 @@ public class Executors implements AutoCloseable {
                 logger.log(
                     Level.FINE,
                     "Waiting on waitFuture[{0}], {1} ns remaining",
-                    new Object[]{
+                    new Object[] {
                         i,
                         nanosRemaining
                     }
@@ -1598,7 +1598,7 @@ public class Executors implements AutoCloseable {
                       logger.log(
                           Level.FINE,
                           "Waiting on waitOnOtherThreads[{0}], {1} ns remaining",
-                          new Object[]{
+                          new Object[] {
                               i,
                               nanosRemaining
                           }
