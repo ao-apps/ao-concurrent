@@ -603,7 +603,7 @@ public class Executors implements AutoCloseable {
       } catch (ThreadDeath td) {
         throw td;
       } catch (Throwable t) {
-        logger.log(Level.SEVERE, null, t);
+        logger.log(Level.SEVERE, "TODO: message here", t);
       } finally {
         if (Thread.interrupted()) {
           logger.log(Level.WARNING, "Cleared thread interrupted state before returning to timer");
@@ -644,7 +644,7 @@ public class Executors implements AutoCloseable {
       } catch (ThreadDeath td) {
         throw td;
       } catch (Throwable t) {
-        logger.log(Level.SEVERE, null, t);
+        logger.log(Level.SEVERE, "TODO: message here", t);
       } finally {
         if (Thread.interrupted()) {
           logger.log(Level.WARNING, "Cleared thread interrupted state before returning to timer");
@@ -943,7 +943,7 @@ public class Executors implements AutoCloseable {
           try {
             ues.executorService.shutdown();
           } catch (SecurityException e) {
-            logger.log(Level.WARNING, null, e);
+            logger.log(Level.WARNING, "TODO: message here", e);
           }
           try {
             if (logger.isLoggable(Level.FINE)) {
@@ -953,7 +953,7 @@ public class Executors implements AutoCloseable {
               ues.removeShutdownHook();
             }
           } catch (InterruptedException e) {
-            logger.log(Level.WARNING, null, e);
+            logger.log(Level.WARNING, "TODO: message here", e);
             // Restore the interrupted status
             Thread.currentThread().interrupt();
           }
@@ -1099,7 +1099,7 @@ public class Executors implements AutoCloseable {
               try {
                 ppes.executorService.shutdown();
               } catch (SecurityException e) {
-                logger.log(Level.WARNING, null, e);
+                logger.log(Level.WARNING, "TODO: message here", e);
               }
               try {
                 if (logger.isLoggable(Level.FINE)) {
@@ -1109,7 +1109,7 @@ public class Executors implements AutoCloseable {
                   ppes.removeShutdownHook();
                 }
               } catch (InterruptedException e) {
-                logger.log(Level.WARNING, null, e);
+                logger.log(Level.WARNING, "TODO: message here", e);
                 // Restore the interrupted status
                 Thread.currentThread().interrupt();
               }
@@ -1573,7 +1573,7 @@ public class Executors implements AutoCloseable {
                 break;
               } catch (TimeoutException e) {
                 // Cancel after timeout
-                // logger.log(Level.WARNING, null, e);
+                // logger.log(Level.WARNING, "TODO: message here", e);
                 future.cancel(true);
               }
             } else {
@@ -1615,7 +1615,7 @@ public class Executors implements AutoCloseable {
                       break;
                     } catch (TimeoutException e) {
                       // Cancel after timeout
-                      // logger.log(Level.WARNING, null, e);
+                      // logger.log(Level.WARNING, "TODO: message here", e);
                       future.cancel(true);
                     }
                   } else {

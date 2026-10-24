@@ -1,6 +1,6 @@
 /*
  * ao-concurrent - Concurrent programming utilities.
- * Copyright (C) 2011, 2012, 2014, 2015, 2016, 2020, 2021, 2022  AO Industries, Inc.
+ * Copyright (C) 2011, 2012, 2014, 2015, 2016, 2020, 2021, 2022, 2026  AO Industries, Inc.
  *     support@aoindustries.com
  *     7262 Bull Pen Cir
  *     Mobile, AL 36695
@@ -93,24 +93,24 @@ public class ExecutorServiceShutdownHook extends Thread {
     try {
       executorService.shutdown();
     } catch (SecurityException e) {
-      logger.log(Level.WARNING, null, e);
+      logger.log(Level.WARNING, "TODO: message here", e);
     }
     try {
       if (!executorService.awaitTermination(shutdownTimeout, shutdownTimeoutUnit)) {
         try {
           executorService.shutdownNow();
         } catch (SecurityException e) {
-          logger.log(Level.WARNING, null, e);
+          logger.log(Level.WARNING, "TODO: message here", e);
         }
       }
     } catch (InterruptedException e) {
       try {
         // Force shutdown
-        logger.log(Level.SEVERE, null, e);
+        logger.log(Level.SEVERE, "TODO: message here", e);
         try {
           executorService.shutdownNow();
         } catch (SecurityException e2) {
-          logger.log(Level.WARNING, null, e2);
+          logger.log(Level.WARNING, "TODO: message here", e2);
         }
       } finally {
         // Restore the interrupted status
